@@ -7,20 +7,28 @@
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "biome check",
-    "format": "biome format --write"
+    "format": "biome format --write",
+    "test": "jest"
   },
   "dependencies": {
+    "lucide-react": "^0.475.0",
+    "fast-xml-parser": "^5.3.0",
+    "next": "15.5.4",
+    "openmeteo": "^1.2.1",
     "react": "19.1.0",
-    "react-dom": "19.1.0",
-    "next": "15.5.4"
+    "react-dom": "19.1.0"
   },
   "devDependencies": {
-    "typescript": "^5",
+    "@biomejs/biome": "2.2.0",
+    "@tailwindcss/postcss": "^4",
+    "@types/jest": "^29.5.12",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@tailwindcss/postcss": "^4",
+    "dotenv": "^17.2.3",
+    "jest": "^29.7.0",
     "tailwindcss": "^4",
-    "@biomejs/biome": "2.2.0"
+    "ts-jest": "^29.3.3",
+    "typescript": "^5"
   }
 }
