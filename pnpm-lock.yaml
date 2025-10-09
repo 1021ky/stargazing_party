@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      astronomy-engine:
+        specifier: 2.1.14
+        version: 2.1.14
       fast-xml-parser:
         specifier: ^5.3.0
         version: 5.3.0
@@ -732,6 +735,9 @@ packages:
 
   argparse@1.0.10:
     resolution: {integrity: sha512-o5Roy6tNG4SL/FOkCAN6RzjiakZS25RLYFrcMttJqbdd8BWrnA+fGz57iN5Pb06pvBGvl5gQ0B48dJlslXvoTg==}
+
+  astronomy-engine@2.1.14:
+    resolution: {integrity: sha512-zV5qgL5yUVVwVcHK4SqgZU115kJ+OUg7f//4sRDFHTma1bWurRNcXf6+ohVI8b2AVlOy9zWpKw6R/aCyBa+7vg==}
 
   babel-jest@29.7.0:
     resolution: {integrity: sha512-BrvGY3xZSwEcCzKvKsCi2GgHqDqsYkOP4/by5xCgIwGXQxIEh+8ew3gmrE1y7XRR6LHZIj6yLYnUi/mm2KXKBg==}
@@ -2472,6 +2478,8 @@ snapshots:
   argparse@1.0.10:
     dependencies:
       sprintf-js: 1.0.3
+
+  astronomy-engine@2.1.14: {}
 
   babel-jest@29.7.0(@babel/core@7.28.4):
     dependencies:
