@@ -2,7 +2,7 @@ import { searchHotelsWithAvailability } from '../rakuten_travel_hotel_search_api
 
 const TOKYO_STATION_LATITUDE = 35.681236;
 const TOKYO_STATION_LONGITUDE = 139.767125;
-const describeOrSkip = process.env.RAKUTEN_TRAVEL_APPLICATION_ID ? describe : describe.skip;
+const describeOrSkip = process.env.RAKUTEN_APP_ID ? describe : describe.skip;
 
 describeOrSkip('searchHotelsWithAvailability (integration)', () => {
     beforeAll(() => {
@@ -13,7 +13,7 @@ describeOrSkip('searchHotelsWithAvailability (integration)', () => {
         const hotels = await searchHotelsWithAvailability(
             TOKYO_STATION_LATITUDE,
             TOKYO_STATION_LONGITUDE,
-            [new Date()],
+            [new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)], // 空きがありそうな2週間後
         );
 
         expect(Array.isArray(hotels)).toBe(true);

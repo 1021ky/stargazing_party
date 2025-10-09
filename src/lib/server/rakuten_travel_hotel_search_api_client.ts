@@ -1,7 +1,7 @@
 const BASE_URL = 'https://app.rakuten.co.jp/services/api/Travel/SimpleHotelSearch/20170426';
 const REQUEST_TIMEOUT_MS = 5_000;
 const MAX_RETRIES = 3;
-const SEARCH_RADIUS_KM = 30;
+const SEARCH_RADIUS_KM = 3;
 const SYNODIC_MONTH_DAYS = 29.530588853;
 
 type LightPollutionLevel = '低' | '中' | '高';
@@ -96,9 +96,9 @@ function validateCoordinate(value: unknown, label: 'latitude' | 'longitude'): as
 }
 
 function buildRequestParams(latitude: number, longitude: number, stayDate: string): URLSearchParams {
-    const appId = process.env.RAKUTEN_TRAVEL_APPLICATION_ID;
+    const appId = process.env.RAKUTEN_APP_ID;
     if (!appId) {
-        throw new Error('RAKUTEN_TRAVEL_APPLICATION_ID is not set');
+        throw new Error('RAKUTEN_APP_ID is not set');
     }
 
     const params = new URLSearchParams();
@@ -112,7 +112,20 @@ function buildRequestParams(latitude: number, longitude: number, stayDate: strin
     params.set('datumType', '1');
     params.set('hits', '10');
     params.set('checkinDate', stayDate);
+    params.set('checkoutDate', calculateCheckoutDate(stayDate));
+    params.set('adultNum', '2');
+    params.set('roomNum', '1');
     return params;
+}
+
+function calculateCheckoutDate(stayDate: string): string {
+    const stay = new Date(`${stayDate}T00:00:00Z`);
+    if (Number.isNaN(stay.getTime())) {
+        throw new Error('Invalid stayDate provided');
+    }
+
+    stay.setUTCDate(stay.getUTCDate() + 1);
+    return toIsoDate(stay);
 }
 
 function createFetchClient(): Fetcher {
@@ -125,9 +138,18 @@ function createFetchClient(): Fetcher {
             const timeout = setTimeout(() => controller.abort(new Error('Request timeout')), REQUEST_TIMEOUT_MS);
 
             const result = await fetch(input, { ...init, signal: controller.signal })
-                .then(response => {
+                .then(async response => {
                     if (response.status === 200) {
                         return { success: true as const, response };
+                    }
+                    if (response.status === 400) {
+                        try {
+                            const bodyText = await response.clone().text();
+                            console.error('Rakuten Travel API returned 400. Response body:', bodyText);
+                        }
+                        catch (error) {
+                            console.error('Rakuten Travel API returned 400 but response body could not be read.', error);
+                        }
                     }
                     lastError = new Error(`Unexpected status code: ${response.status}`);
                     return { success: false as const };

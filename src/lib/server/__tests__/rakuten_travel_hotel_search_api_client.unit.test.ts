@@ -2,13 +2,13 @@ import { searchHotelsWithAvailability } from '../rakuten_travel_hotel_search_api
 
 describe('searchHotelsWithAvailability (unit)', () => {
     const originalFetch = global.fetch;
-    const originalAppId = process.env.RAKUTEN_TRAVEL_APPLICATION_ID;
+    const originalAppId = process.env.RAKUTEN_APP_ID;
     const latitude = 35.68;
     const longitude = 139.76;
 
     beforeEach(() => {
         jest.useRealTimers();
-        process.env.RAKUTEN_TRAVEL_APPLICATION_ID = 'test-app-id';
+        process.env.RAKUTEN_APP_ID = 'test-app-id';
     });
 
     afterEach(() => {
@@ -18,7 +18,7 @@ describe('searchHotelsWithAvailability (unit)', () => {
 
     afterAll(() => {
         global.fetch = originalFetch;
-        process.env.RAKUTEN_TRAVEL_APPLICATION_ID = originalAppId;
+        process.env.RAKUTEN_APP_ID = originalAppId;
     });
 
     it('APIが200を返した場合に宿泊データを返し、複数日の結果をマージする', async () => {
@@ -80,11 +80,15 @@ describe('searchHotelsWithAvailability (unit)', () => {
             expect.stringContaining('checkinDate=2025-02-01'),
             expect.objectContaining({ method: 'GET' }),
         );
+        expect(fetchMock.mock.calls[0]?.[0]).toContain('checkoutDate=2025-02-02');
+        expect(fetchMock.mock.calls[0]?.[0]).toContain('adultNum=2');
+        expect(fetchMock.mock.calls[0]?.[0]).toContain('roomNum=1');
         expect(fetchMock).toHaveBeenNthCalledWith(
             2,
             expect.stringContaining('checkinDate=2025-02-02'),
             expect.objectContaining({ method: 'GET' }),
         );
+        expect(fetchMock.mock.calls[1]?.[0]).toContain('checkoutDate=2025-02-03');
         expect(accommodations).toHaveLength(1);
         const [hotel] = accommodations;
         expect(hotel).toMatchObject({
@@ -130,10 +134,10 @@ describe('searchHotelsWithAvailability (unit)', () => {
     });
 
     it('環境変数が設定されていない場合は例外を投げる', async () => {
-        process.env.RAKUTEN_TRAVEL_APPLICATION_ID = '';
+        process.env.RAKUTEN_APP_ID = '';
 
         await expect(searchHotelsWithAvailability(latitude, longitude, ['2025-02-01'])).rejects.toThrow(
-            'RAKUTEN_TRAVEL_APPLICATION_ID is not set',
+            'RAKUTEN_APP_ID is not set',
         );
     });
 
