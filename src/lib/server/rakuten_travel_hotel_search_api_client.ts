@@ -65,14 +65,28 @@ interface RakutenHotelRatingInfo {
 
 type Fetcher = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
-export async function searchHotelsWithAvailability(latitude: number, longitude: number): Promise<RakutenHotelAccommodation[]> {
+export async function searchHotelsWithAvailability(
+    latitude: number,
+    longitude: number,
+    stayDates: Array<string | Date>,
+): Promise<RakutenHotelAccommodation[]> {
     validateCoordinate(latitude, 'latitude');
     validateCoordinate(longitude, 'longitude');
+    const normalisedStayDates = normaliseStayDates(stayDates);
+    if (normalisedStayDates.length === 0) {
+        throw new Error('stayDates must contain at least one date');
+    }
 
-    const params = buildRequestParams(latitude, longitude);
     const fetcher = createFetchClient();
-    const data = await fetchRakutenHotels(params, fetcher);
-    return transformHotelsToAccommodation(data);
+    const accommodations = await Promise.all(
+        normalisedStayDates.map(async stayDate => {
+            const params = buildRequestParams(latitude, longitude, stayDate);
+            const data = await fetchRakutenHotels(params, fetcher);
+            return transformHotelsToAccommodation(data, stayDate);
+        }),
+    );
+
+    return mergeAccommodations(accommodations.flat());
 }
 
 function validateCoordinate(value: unknown, label: 'latitude' | 'longitude'): asserts value is number {
@@ -81,7 +95,7 @@ function validateCoordinate(value: unknown, label: 'latitude' | 'longitude'): as
     }
 }
 
-function buildRequestParams(latitude: number, longitude: number): URLSearchParams {
+function buildRequestParams(latitude: number, longitude: number, stayDate: string): URLSearchParams {
     const appId = process.env.RAKUTEN_TRAVEL_APPLICATION_ID;
     if (!appId) {
         throw new Error('RAKUTEN_TRAVEL_APPLICATION_ID is not set');
@@ -97,6 +111,7 @@ function buildRequestParams(latitude: number, longitude: number): URLSearchParam
     params.set('vacancy', '1');
     params.set('datumType', '1');
     params.set('hits', '10');
+    params.set('checkinDate', stayDate);
     return params;
 }
 
@@ -143,7 +158,7 @@ async function fetchRakutenHotels(params: URLSearchParams, fetcher: Fetcher): Pr
     return response.json();
 }
 
-function transformHotelsToAccommodation(payload: unknown): RakutenHotelAccommodation[] {
+function transformHotelsToAccommodation(payload: unknown, stayDate: string): RakutenHotelAccommodation[] {
     if (!payload || typeof payload !== 'object') {
         throw new Error('Rakuten Travel API response is not valid JSON');
     }
@@ -158,11 +173,11 @@ function transformHotelsToAccommodation(payload: unknown): RakutenHotelAccommoda
         : [];
 
     return hotels
-        .map(extractAccommodationFromWrapper)
+        .map(wrapper => extractAccommodationFromWrapper(wrapper, stayDate))
         .filter((item): item is RakutenHotelAccommodation => item !== null);
 }
 
-function extractAccommodationFromWrapper(wrapper: RakutenHotelWrapper): RakutenHotelAccommodation | null {
+function extractAccommodationFromWrapper(wrapper: RakutenHotelWrapper, stayDate: string): RakutenHotelAccommodation | null {
     const hotelEntries = Array.isArray(wrapper.hotel) ? wrapper.hotel : [];
 
     const basicInfo = hotelEntries.find(entry => entry.hotelBasicInfo)?.hotelBasicInfo
@@ -201,7 +216,7 @@ function extractAccommodationFromWrapper(wrapper: RakutenHotelWrapper): RakutenH
         name: basicInfo.hotelName,
         location,
         prefecture,
-        newMoonDate: formatNextNewMoonDate(),
+        newMoonDate: formatNextNewMoonDate(new Date(stayDate)),
         clearSkyProbability,
         price: normaliseNumber(basicInfo.hotelMinCharge ?? 0, 0),
         rating,
@@ -210,6 +225,64 @@ function extractAccommodationFromWrapper(wrapper: RakutenHotelWrapper): RakutenH
         lightPollution: determineLightPollutionLevel(ratingInfo?.locationAverage, latitude),
         altitude,
     };
+}
+
+function mergeAccommodations(accommodations: RakutenHotelAccommodation[]): RakutenHotelAccommodation[] {
+    const merged = new Map<string, RakutenHotelAccommodation>();
+
+    for (const accommodation of accommodations) {
+        const existing = merged.get(accommodation.id);
+        if (!existing) {
+            merged.set(accommodation.id, accommodation);
+            continue;
+        }
+
+        const combinedAvailableRooms = existing.availableRooms + accommodation.availableRooms;
+        const betterRating = accommodation.rating > existing.rating ? accommodation.rating : existing.rating;
+        const betterClearSky = Math.max(existing.clearSkyProbability, accommodation.clearSkyProbability);
+        const newMoonDate = existing.newMoonDate <= accommodation.newMoonDate ? existing.newMoonDate : accommodation.newMoonDate;
+
+        merged.set(accommodation.id, {
+            ...existing,
+            availableRooms: combinedAvailableRooms,
+            rating: betterRating,
+            clearSkyProbability: betterClearSky,
+            newMoonDate,
+        });
+    }
+
+    return Array.from(merged.values());
+}
+
+function normaliseStayDates(stayDates: Array<string | Date>): string[] {
+    if (!Array.isArray(stayDates)) {
+        throw new TypeError('stayDates must be an array of string or Date');
+    }
+
+    return stayDates.map(date => normaliseDateInput(date)).filter((value, index, array) => array.indexOf(value) === index);
+}
+
+function normaliseDateInput(value: string | Date): string {
+    if (value instanceof Date) {
+        if (Number.isNaN(value.getTime())) {
+            throw new TypeError('Invalid Date object was provided in stayDates');
+        }
+        return toIsoDate(value);
+    }
+
+    if (typeof value === 'string') {
+        const parsed = new Date(value);
+        if (Number.isNaN(parsed.getTime())) {
+            throw new TypeError('stayDates must only contain ISO 8601 date strings (YYYY-MM-DD) or Date objects');
+        }
+        return toIsoDate(parsed);
+    }
+
+    throw new TypeError('stayDates must only contain string or Date values');
+}
+
+function toIsoDate(date: Date): string {
+    return date.toISOString().slice(0, 10);
 }
 
 function extractPrefectureAndCity(address: string): { prefecture: string; city: string } {

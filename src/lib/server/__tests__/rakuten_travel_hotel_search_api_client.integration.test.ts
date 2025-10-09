@@ -13,6 +13,7 @@ describeOrSkip('searchHotelsWithAvailability (integration)', () => {
         const hotels = await searchHotelsWithAvailability(
             TOKYO_STATION_LATITUDE,
             TOKYO_STATION_LONGITUDE,
+            [new Date()],
         );
 
         expect(Array.isArray(hotels)).toBe(true);

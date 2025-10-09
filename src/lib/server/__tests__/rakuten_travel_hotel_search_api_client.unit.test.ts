@@ -21,7 +21,7 @@ describe('searchHotelsWithAvailability (unit)', () => {
         process.env.RAKUTEN_TRAVEL_APPLICATION_ID = originalAppId;
     });
 
-    it('APIが200を返した場合に宿泊データを返す', async () => {
+    it('APIが200を返した場合に宿泊データを返し、複数日の結果をマージする', async () => {
         jest.useFakeTimers();
         jest.setSystemTime(new Date('2025-01-15T00:00:00Z'));
 
@@ -58,17 +58,31 @@ describe('searchHotelsWithAvailability (unit)', () => {
             ],
         };
 
-        const response = new Response(JSON.stringify(apiResponse), {
+        const day1Response = new Response(JSON.stringify(apiResponse), {
             status: 200,
             headers: { 'Content-Type': 'application/json' },
         });
-        const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue(response);
+        const day2Response = new Response(JSON.stringify(apiResponse), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+        });
+        const fetchMock = jest
+            .spyOn(global, 'fetch')
+            .mockResolvedValueOnce(day1Response)
+            .mockResolvedValueOnce(day2Response);
 
-        const accommodations = await searchHotelsWithAvailability(latitude, longitude);
+        const stayDates = ['2025-02-01', '2025-02-02'];
+        const accommodations = await searchHotelsWithAvailability(latitude, longitude, stayDates);
 
-        expect(fetchMock).toHaveBeenCalledTimes(1);
-        expect(fetchMock).toHaveBeenCalledWith(
-            expect.stringContaining('searchRadius=30'),
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+        expect(fetchMock).toHaveBeenNthCalledWith(
+            1,
+            expect.stringContaining('checkinDate=2025-02-01'),
+            expect.objectContaining({ method: 'GET' }),
+        );
+        expect(fetchMock).toHaveBeenNthCalledWith(
+            2,
+            expect.stringContaining('checkinDate=2025-02-02'),
             expect.objectContaining({ method: 'GET' }),
         );
         expect(accommodations).toHaveLength(1);
@@ -78,7 +92,6 @@ describe('searchHotelsWithAvailability (unit)', () => {
             name: 'テスト宿泊施設',
             prefecture: '長野県',
             location: expect.stringContaining('松本市'),
-            availableRooms: 4,
             price: 18000,
             lightPollution: '低',
         });
@@ -86,6 +99,7 @@ describe('searchHotelsWithAvailability (unit)', () => {
         expect(hotel.clearSkyProbability).toBeGreaterThanOrEqual(40);
         expect(hotel.clearSkyProbability).toBeLessThanOrEqual(95);
         expect(hotel.imageUrl).toBe('https://example.com/hotel.jpg');
+        expect(hotel.availableRooms).toBe(8);
     });
 
     it('APIが非200を返し続ける場合は再試行し最終的に例外を投げる', async () => {
@@ -93,7 +107,7 @@ describe('searchHotelsWithAvailability (unit)', () => {
             .spyOn(global, 'fetch')
             .mockResolvedValue(new Response(JSON.stringify({}), { status: 500 }));
 
-        await expect(searchHotelsWithAvailability(latitude, longitude)).rejects.toThrow(
+        await expect(searchHotelsWithAvailability(latitude, longitude, ['2025-02-01'])).rejects.toThrow(
             'Unexpected status code: 500',
         );
         expect(fetchMock).toHaveBeenCalledTimes(3);
@@ -110,7 +124,7 @@ describe('searchHotelsWithAvailability (unit)', () => {
         });
         jest.spyOn(global, 'fetch').mockResolvedValue(response);
 
-        await expect(searchHotelsWithAvailability(latitude, longitude)).rejects.toThrow(
+        await expect(searchHotelsWithAvailability(latitude, longitude, ['2025-02-01'])).rejects.toThrow(
             'parameter error',
         );
     });
@@ -118,8 +132,14 @@ describe('searchHotelsWithAvailability (unit)', () => {
     it('環境変数が設定されていない場合は例外を投げる', async () => {
         process.env.RAKUTEN_TRAVEL_APPLICATION_ID = '';
 
-        await expect(searchHotelsWithAvailability(latitude, longitude)).rejects.toThrow(
+        await expect(searchHotelsWithAvailability(latitude, longitude, ['2025-02-01'])).rejects.toThrow(
             'RAKUTEN_TRAVEL_APPLICATION_ID is not set',
+        );
+    });
+
+    it('宿泊日が空配列の場合は例外を投げる', async () => {
+        await expect(searchHotelsWithAvailability(latitude, longitude, [])).rejects.toThrow(
+            'stayDates must contain at least one date',
         );
     });
 });
