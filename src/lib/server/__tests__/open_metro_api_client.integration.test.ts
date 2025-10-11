@@ -1,6 +1,6 @@
 import { getDailyWeatherSummary } from '../open_metro_api_client';
 
-jest.setTimeout(30_000);
+jest.setTimeout(60_000);
 
 const describeOrSkip = process.env.RUN_OPEN_METEO_INTEGRATION ? describe : describe.skip;
 
