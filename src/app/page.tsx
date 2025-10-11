@@ -9,84 +9,102 @@ import { SearchResults } from "./_components/SearchResults";
 type SearchParams = {
   year: string;
   month: string;
+  day: string;
   prefecture: string;
 } | null;
 
-const mockAccommodations: Accommodation[] = [
-  {
-    id: "1",
-    name: "星空リゾート 八ヶ岳高原ホテル",
-    location: "八ヶ岳高原",
-    prefecture: "長野県",
-    newMoonDate: "2025年11月1日",
-    clearSkyProbability: 85,
-    price: 18000,
-    rating: 4.8,
-    availableRooms: 3,
-    imageUrl: "https://images.unsplash.com/photo-1568556612080-6353ba48eb8a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb3VudGFpbiUyMGhvdGVsJTIwbmlnaHQlMjBzdGFyc3xlbnwxfHx8fDE3NTk5MTIzMTV8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
-    lightPollution: "低",
-    altitude: 1400,
-  },
-  {
-    id: "2",
-    name: "天の川温泉旅館",
-    location: "美ヶ原高原",
-    prefecture: "長野県",
-    newMoonDate: "2025年11月1日",
-    clearSkyProbability: 78,
-    price: 12000,
-    rating: 4.5,
-    availableRooms: 5,
-    imageUrl: "https://images.unsplash.com/photo-1733653023417-92ffcab24969?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx0cmFkaXRpb25hbCUyMGphcGFuZXNlJTIwcnlva2FufGVufDF8fHx8MTc1OTkwODYzNHww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
-    lightPollution: "低",
-    altitude: 1200,
-  },
-  {
-    id: "3",
-    name: "高原山荘 星見の宿",
-    location: "乗鞍高原",
-    prefecture: "長野県",
-    newMoonDate: "2025年11月1日",
-    clearSkyProbability: 82,
-    price: 15000,
-    rating: 4.7,
-    availableRooms: 2,
-    imageUrl: "https://images.unsplash.com/photo-1673060412036-59cac0c54c64?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb3VudGFpbiUyMGxvZGdlJTIwY2FiaW58ZW58MXx8fHwxNzU5OTEyMzIxfDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
-    lightPollution: "低",
-    altitude: 1600,
-  },
-];
+type SearchMetadata = {
+  resolvedAddress: string | null;
+  weather: {
+    date: string;
+    isClearSky: boolean;
+    temperatureMax: number;
+    temperatureMin: number;
+    timezone: string;
+  } | null;
+};
 
 export default function Home() {
   const [accommodations, setAccommodations] = useState<Accommodation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchParams, setSearchParams] = useState<SearchParams>(null);
-  const timeoutRef = useRef<number | null>(null);
+  const [searchMetadata, setSearchMetadata] = useState<SearchMetadata | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     return () => {
-      if (timeoutRef.current) {
-        window.clearTimeout(timeoutRef.current);
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
       }
     };
   }, []);
 
-  const handleSearch = (year: string, month: string, prefecture: string) => {
-    if (timeoutRef.current) {
-      window.clearTimeout(timeoutRef.current);
+  const handleSearch = async (year: string, month: string, day: string, prefecture: string) => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
     }
 
     setIsLoading(true);
-    setSearchParams({ year, month, prefecture });
+    setErrorMessage(null);
+    setAccommodations([]);
+    setSearchMetadata(null);
+    setSearchParams({ year, month, day, prefecture });
 
-    timeoutRef.current = window.setTimeout(() => {
-      const filteredResults = mockAccommodations.filter(
-        (accommodation) => accommodation.prefecture === prefecture,
-      );
-
-      setAccommodations(filteredResults);
+    let dateIso: string;
+    try {
+      dateIso = buildIsoDate(year, month, day);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '日付の解釈に失敗しました';
+      setErrorMessage(message);
       setIsLoading(false);
-    }, 1200);
+      return;
+    }
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    try {
+      const response = await fetch('/api/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ date: dateIso, prefecture }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        const message = typeof payload?.message === 'string' ? payload.message : '検索に失敗しました';
+        throw new Error(message);
+      }
+
+      const data = await response.json();
+      const hotels = Array.isArray(data?.accommodations) ? data.accommodations : [];
+      const resolvedAddress = typeof data?.resolvedAddress === 'string' ? data.resolvedAddress : null;
+      const weather = data?.weather && typeof data.weather === 'object' ? {
+        date: typeof data.weather.date === 'string' ? data.weather.date : '',
+        isClearSky: Boolean(data.weather.isClearSky),
+        temperatureMax: Number(data.weather.temperatureMax ?? Number.NaN),
+        temperatureMin: Number(data.weather.temperatureMin ?? Number.NaN),
+        timezone: typeof data.weather.timezone === 'string' ? data.weather.timezone : '',
+      } : null;
+      setAccommodations(hotels);
+      setSearchMetadata({ resolvedAddress, weather });
+    } catch (error) {
+      if (controller.signal.aborted) {
+        return;
+      }
+      const message = error instanceof Error ? error.message : '予期しないエラーが発生しました';
+      setErrorMessage(message);
+      setAccommodations([]);
+      setSearchMetadata(null);
+    } finally {
+      if (!controller.signal.aborted) {
+        setIsLoading(false);
+      }
+    }
   };
 
   return (
@@ -104,8 +122,36 @@ export default function Home() {
 
       <main className="mx-auto mt-10 flex w-full max-w-6xl flex-col gap-10">
         <SearchForm onSearch={handleSearch} />
-        <SearchResults accommodations={accommodations} isLoading={isLoading} searchParams={searchParams} />
+        <SearchResults
+          accommodations={accommodations}
+          isLoading={isLoading}
+          searchParams={searchParams}
+          errorMessage={errorMessage}
+          resolvedAddress={searchMetadata?.resolvedAddress ?? null}
+          weather={searchMetadata?.weather ?? null}
+        />
       </main>
     </div>
   );
+}
+
+function buildIsoDate(year: string, month: string, day: string): string {
+  const yearNum = Number.parseInt(year, 10);
+  const monthNum = Number.parseInt(month, 10);
+  const dayNum = Number.parseInt(day, 10);
+
+  if (Number.isNaN(yearNum) || Number.isNaN(monthNum) || Number.isNaN(dayNum)) {
+    throw new Error('日付の指定が不正です');
+  }
+
+  const iso = `${yearNum.toString().padStart(4, '0')}-${monthNum.toString().padStart(2, '0')}-${dayNum
+    .toString()
+    .padStart(2, '0')}`;
+
+  const parsed = new Date(iso);
+  if (Number.isNaN(parsed.getTime())) {
+    throw new Error('存在しない日付が指定されました');
+  }
+
+  return iso;
 }

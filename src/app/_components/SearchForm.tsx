@@ -1,9 +1,9 @@
 'use client';
 
-import { FormEvent } from "react";
+import { FormEvent, useState } from "react";
 
 interface SearchFormProps {
-    onSearch: (year: string, month: string, prefecture: string) => void;
+    onSearch: (year: string, month: string, day: string, prefecture: string) => void;
 }
 
 const prefectures = [
@@ -16,20 +16,36 @@ const prefectures = [
     "熊本県", "大分県", "宮崎県", "鹿児島県", "沖縄県",
 ];
 
+// Open-Meteo の許容日付レンジに合わせる（サーバと同じ既定値を使う）
+const OPEN_METEO_ALLOWED_START_DATE_MIN = process.env.NEXT_PUBLIC_OPEN_METEO_ALLOWED_START_DATE_MIN ?? '2025-07-10';
+const OPEN_METEO_ALLOWED_START_DATE_MAX = process.env.NEXT_PUBLIC_OPEN_METEO_ALLOWED_START_DATE_MAX ?? '2025-10-26';
+
+const minDate = new Date(OPEN_METEO_ALLOWED_START_DATE_MIN + 'T00:00:00Z');
+const maxDate = new Date(OPEN_METEO_ALLOWED_START_DATE_MAX + 'T00:00:00Z');
+
 const currentYear = new Date().getFullYear();
-const years = Array.from({ length: 3 }, (_, i) => currentYear + i);
+// 年は min/max の間だけ表示する
+const startYear = minDate.getUTCFullYear();
+const endYear = maxDate.getUTCFullYear();
+const years = Array.from({ length: endYear - startYear + 1 }, (_, i) => startYear + i);
 const months = Array.from({ length: 12 }, (_, i) => i + 1);
+const days = Array.from({ length: 31 }, (_, i) => i + 1);
 
 export function SearchForm({ onSearch }: SearchFormProps) {
+    const [selectedYear, setSelectedYear] = useState<string>('');
+    const [selectedMonth, setSelectedMonth] = useState<string>('');
+    const [selectedDay, setSelectedDay] = useState<string>('');
+
     const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
         const year = (formData.get('year') as string) ?? '';
         const month = (formData.get('month') as string) ?? '';
+        const day = (formData.get('day') as string) ?? '';
         const prefecture = (formData.get('prefecture') as string) ?? '';
 
-        if (year && month && prefecture) {
-            onSearch(year, month, prefecture);
+        if (year && month && day && prefecture) {
+            onSearch(year, month, day, prefecture);
         }
     };
 
@@ -38,23 +54,27 @@ export function SearchForm({ onSearch }: SearchFormProps) {
             <div className="rounded-3xl border bg-white p-6 shadow-sm">
                 <h2 className="text-center text-lg font-semibold">星空観察 宿泊施設検索</h2>
                 <form className="mt-6 grid gap-6" onSubmit={handleSubmit}>
-                    <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid gap-4 sm:grid-cols-3">
                         <label className="grid gap-2 text-sm font-medium text-slate-700">
                             <span>年</span>
                             <select
                                 name="year"
                                 required
-                                defaultValue=""
+                                value={selectedYear}
+                                onChange={(e) => setSelectedYear(e.target.value)}
                                 className="rounded-full border border-slate-200 px-4 py-2 text-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
                             >
                                 <option value="" disabled>
                                     年を選択
                                 </option>
-                                {years.map((year) => (
-                                    <option key={year} value={year}>
-                                        {year}年
-                                    </option>
-                                ))}
+                                {years.map((year) => {
+                                    const yearDisabled = new Date(year, 0, 1) > maxDate || new Date(year, 11, 31) < minDate;
+                                    return (
+                                        <option key={year} value={String(year)} disabled={yearDisabled}>
+                                            {year}年
+                                        </option>
+                                    );
+                                })}
                             </select>
                         </label>
 
@@ -63,17 +83,49 @@ export function SearchForm({ onSearch }: SearchFormProps) {
                             <select
                                 name="month"
                                 required
-                                defaultValue=""
+                                value={selectedMonth}
+                                onChange={(e) => setSelectedMonth(e.target.value)}
                                 className="rounded-full border border-slate-200 px-4 py-2 text-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
                             >
                                 <option value="" disabled>
                                     月を選択
                                 </option>
-                                {months.map((month) => (
-                                    <option key={month} value={month}>
-                                        {month}月
-                                    </option>
-                                ))}
+                                {months.map((month) => {
+                                    const selYear = Number(selectedYear) || currentYear;
+                                    const monthStart = new Date(Date.UTC(selYear, month - 1, 1));
+                                    const monthEnd = new Date(Date.UTC(selYear, month - 1, new Date(selYear, month, 0).getDate()));
+                                    const monthDisabled = monthEnd < minDate || monthStart > maxDate;
+                                    return (
+                                        <option key={month} value={String(month)} disabled={monthDisabled}>
+                                            {month}月
+                                        </option>
+                                    );
+                                })}
+                            </select>
+                        </label>
+                        <label className="grid gap-2 text-sm font-medium text-slate-700">
+                            <span>日</span>
+                            <select
+                                name="day"
+                                required
+                                value={selectedDay}
+                                onChange={(e) => setSelectedDay(e.target.value)}
+                                className="rounded-full border border-slate-200 px-4 py-2 text-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                            >
+                                <option value="" disabled>
+                                    日を選択
+                                </option>
+                                {days.map((day) => {
+                                    const selYear = Number(selectedYear) || currentYear;
+                                    const selMonth = Number(selectedMonth) || 1;
+                                    const candidate = new Date(Date.UTC(selYear, selMonth - 1, day));
+                                    const dayDisabled = candidate < minDate || candidate > maxDate;
+                                    return (
+                                        <option key={day} value={String(day)} disabled={dayDisabled}>
+                                            {day}日
+                                        </option>
+                                    );
+                                })}
                             </select>
                         </label>
                     </div>
