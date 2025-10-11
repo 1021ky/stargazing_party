@@ -116,7 +116,7 @@ export default function Home() {
           <Star className="h-8 w-8 fill-sky-400" />
         </div>
         <p className="mt-4 text-sm text-slate-600 sm:text-base">
-          新月の夜に最高の星空を楽しめる宿泊施設を見つけましょう。光害が少なく、晴天確率の高い場所を厳選してご紹介します。
+          選択した地域で星が見やすい日に宿泊できる施設を検索します。星を見る会を開きましょう！
         </p>
       </header>
 
