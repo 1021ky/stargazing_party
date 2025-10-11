@@ -297,6 +297,27 @@ export function SearchForm({ onSearch }: SearchFormProps) {
             <div className="rounded-3xl border bg-white p-6 shadow-sm">
                 <h2 className="text-center text-lg font-semibold">星空観察 宿泊施設検索</h2>
                 <form className="mt-6 grid gap-6" onSubmit={handleSubmit}>
+
+                    <label className="grid gap-2 text-sm font-medium text-slate-700">
+                        <span>都道府県</span>
+                        <select
+                            name="prefecture"
+                            required
+                            value={selectedPrefecture}
+                            onChange={handlePrefectureChange}
+                            className="rounded-full border border-slate-200 px-4 py-2 text-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                        >
+                            <option value="" disabled>
+                                都道府県を選択
+                            </option>
+                            {prefectures.map((prefecture) => (
+                                <option key={prefecture} value={prefecture}>
+                                    {prefecture}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+
                     <label className="grid gap-2 text-sm font-medium text-slate-700">
                         <span>日付</span>
                         <div ref={calendarContainerRef} className="relative">
@@ -354,26 +375,6 @@ export function SearchForm({ onSearch }: SearchFormProps) {
                         {calendarStatusMessage ? (
                             <p className={`text-xs ${calendarStatusClass}`}>{calendarStatusMessage}</p>
                         ) : null}
-                    </label>
-
-                    <label className="grid gap-2 text-sm font-medium text-slate-700">
-                        <span>都道府県</span>
-                        <select
-                            name="prefecture"
-                            required
-                            value={selectedPrefecture}
-                            onChange={handlePrefectureChange}
-                            className="rounded-full border border-slate-200 px-4 py-2 text-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
-                        >
-                            <option value="" disabled>
-                                都道府県を選択
-                            </option>
-                            {prefectures.map((prefecture) => (
-                                <option key={prefecture} value={prefecture}>
-                                    {prefecture}
-                                </option>
-                            ))}
-                        </select>
                     </label>
 
                     <button
