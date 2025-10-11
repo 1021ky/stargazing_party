@@ -49,8 +49,8 @@ export async function getDailyWeatherSummary(
     }
 
     const responses = await fetchWeatherWithRetry({
-        latitude: latitude,
-        longitude: longitude,
+        latitude,
+        longitude,
         daily: DAILY_VARIABLES,
         hourly: HOURLY_VARIABLES,
         start_date: targetDateIso,
@@ -61,7 +61,51 @@ export async function getDailyWeatherSummary(
         throw new Error('Open-Meteo API からの応答が空でした');
     }
 
-    return extractSummaryFromResponse(responses[0], targetDateIso);
+    const summaries = extractSummariesFromResponse(responses[0], targetDateIso, targetDateIso);
+    if (!summaries.length) {
+        throw new Error('Open-Meteo API から対象日のデータを取得できませんでした');
+    }
+
+    return summaries[0];
+}
+
+export async function getDailyWeatherSummariesRange(
+    latitude: number,
+    longitude: number,
+    startDate: string | Date,
+    endDate: string | Date,
+): Promise<DailyWeatherSummary[]> {
+    validateCoordinate(latitude, 'latitude');
+    validateCoordinate(longitude, 'longitude');
+
+    const startIso = normaliseDate(startDate);
+    const endIso = normaliseDate(endDate);
+
+    if (startIso > endIso) {
+        throw new RangeError('startDate must be earlier than or equal to endDate');
+    }
+
+    const minAllowed = OPEN_METEO_ALLOWED_START_DATE_MIN;
+    const maxAllowed = OPEN_METEO_ALLOWED_START_DATE_MAX;
+    if (startIso < minAllowed || endIso > maxAllowed) {
+        throw new RangeError(`date range must be within ${minAllowed} and ${maxAllowed}`);
+    }
+
+    const responses = await fetchWeatherWithRetry({
+        latitude,
+        longitude,
+        daily: DAILY_VARIABLES,
+        hourly: HOURLY_VARIABLES,
+        start_date: startIso,
+        end_date: endIso,
+        timezone: 'Asia/Tokyo',
+    });
+
+    if (!responses.length) {
+        throw new Error('Open-Meteo API からの応答が空でした');
+    }
+
+    return extractSummariesFromResponse(responses[0], startIso, endIso);
 }
 
 async function fetchWeatherWithRetry(params: Parameters<typeof fetchWeatherApi>[1]): Promise<Awaited<ReturnType<typeof fetchWeatherApi>>> {
@@ -257,7 +301,7 @@ function delay(ms: number): Promise<void> {
     });
 }
 
-function extractSummaryFromResponse(response: WeatherApiResponse, targetDateIso: string): DailyWeatherSummary {
+function extractSummariesFromResponse(response: WeatherApiResponse, targetStartIso: string, targetEndIso: string): DailyWeatherSummary[] {
     try {
         const pretty = revealAdapter(response);
         console.dir(pretty, { depth: null });
@@ -274,32 +318,57 @@ function extractSummaryFromResponse(response: WeatherApiResponse, targetDateIso:
     const weatherCodes = extractVariableValues(daily, 0, 'weather code');
     const temperatureMaxValues = extractVariableValues(daily, 1, 'temperature_2m_max');
     const temperatureMinValues = extractVariableValues(daily, 2, 'temperature_2m_min');
-    const targetIndex = findDateIndex(daily, weatherCodes.length, targetDateIso, utcOffsetSeconds);
-
-    if (
-        weatherCodes.length <= targetIndex
-        || temperatureMaxValues.length <= targetIndex
-        || temperatureMinValues.length <= targetIndex
-    ) {
-        throw new Error('Open-Meteo API から取得したデータに対象日の値が含まれていません');
+    const length = Math.min(weatherCodes.length, temperatureMaxValues.length, temperatureMinValues.length);
+    if (!Number.isFinite(length) || length <= 0) {
+        throw new Error('Open-Meteo API の日次データ長が不正です');
     }
 
-    const weatherCode = Math.trunc(weatherCodes[targetIndex]);
-    const baseIsClearSky = weatherCode === 0 || weatherCode === 1;
-    const rawJson = (response as unknown as { __raw?: any }).__raw;
-    const hourlyClearSky = determineNightClearSky(rawJson, targetDateIso);
-    const isClearSky = typeof hourlyClearSky === 'boolean' ? hourlyClearSky : baseIsClearSky;
+    const startTimestamp = Number(daily.time());
+    const interval = daily.interval();
 
-    const result: DailyWeatherSummary = {
-        date: targetDateIso,
-        weatherCode,
-        temperatureMax: temperatureMaxValues[targetIndex],
-        temperatureMin: temperatureMinValues[targetIndex],
-        timezone: response.timezone() ?? 'UTC',
-        isClearSky,
-    };
-    console.log('Extracted DailyWeatherSummary:', result);
-    return result;
+    if (Number.isNaN(startTimestamp) || interval <= 0) {
+        throw new Error('Open-Meteo API の時間情報を解釈できませんでした');
+    }
+
+    const timezone = response.timezone() ?? 'UTC';
+    const rawJson = (response as unknown as { __raw?: any }).__raw;
+    const summaries: DailyWeatherSummary[] = [];
+
+    for (let index = 0; index < length; index += 1) {
+        const timestamp = startTimestamp + index * interval + utcOffsetSeconds;
+        const iso = new Date(timestamp * 1000).toISOString().slice(0, 10);
+        if (iso < targetStartIso || iso > targetEndIso) {
+            continue;
+        }
+
+        const weatherCode = Math.trunc(weatherCodes[index]);
+        const baseIsClearSky = weatherCode === 0 || weatherCode === 1;
+        const hourlyClearSky = determineNightClearSky(rawJson, iso);
+        const isClearSky = typeof hourlyClearSky === 'boolean' ? hourlyClearSky : baseIsClearSky;
+
+        summaries.push({
+            date: iso,
+            weatherCode,
+            temperatureMax: temperatureMaxValues[index],
+            temperatureMin: temperatureMinValues[index],
+            timezone,
+            isClearSky,
+        });
+    }
+
+    if (!summaries.length) {
+        throw new Error('Open-Meteo API から対象期間のデータを取得できませんでした');
+    }
+
+    summaries.sort((a, b) => a.date.localeCompare(b.date));
+    return summaries;
+}
+
+function extractSummaryFromResponse(response: WeatherApiResponse, targetDateIso: string): DailyWeatherSummary {
+    const summaries = extractSummariesFromResponse(response, targetDateIso, targetDateIso);
+    const summary = summaries[0];
+    console.log('Extracted DailyWeatherSummary:', summary);
+    return summary;
 }
 
 function validateCoordinate(value: unknown, label: 'latitude' | 'longitude'): asserts value is number {
@@ -347,30 +416,6 @@ function extractVariableValues(
     }
 
     return Array.from(values);
-}
-
-function findDateIndex(
-    daily: NonNullable<ReturnType<WeatherApiResponse['daily']>>,
-    length: number,
-    targetDateIso: string,
-    utcOffsetSeconds: number,
-): number {
-    const start = Number(daily.time());
-    const interval = daily.interval();
-
-    if (Number.isNaN(start) || interval <= 0) {
-        throw new Error('Open-Meteo API の時間情報を解釈できませんでした');
-    }
-
-    for (let index = 0; index < length; index += 1) {
-        const timestamp = start + index * interval + utcOffsetSeconds;
-        const iso = new Date(timestamp * 1000).toISOString().slice(0, 10);
-        if (iso === targetDateIso) {
-            return index;
-        }
-    }
-
-    throw new Error('Open-Meteo API から対象日のデータを取得できませんでした');
 }
 
 function determineNightClearSky(rawJson: any, targetDateIso: string): boolean | null {

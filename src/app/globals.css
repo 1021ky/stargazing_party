@@ -24,3 +24,53 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* カレンダーの表示が崩れるのを防ぐための暫定設定 */
+.rdp {
+  --rdp-cell-size: 2.25rem;
+  --rdp-accent-color: #0284c7;
+  --rdp-background-color: #e0f2fe;
+}
+
+.rdp-months {
+  display: flex;
+}
+
+.rdp-month {
+  margin: 0.25rem;
+}
+
+.rdp-table {
+  width: 100%;
+  border-collapse: collapse;
+  display: table;
+  /* ensure table layout even if a reset overrides */
+}
+
+.rdp-table thead {
+  display: table-header-group;
+}
+
+.rdp-table tbody {
+  display: table-row-group;
+}
+
+.rdp-table tr {
+  display: table-row;
+}
+
+.rdp-table th,
+.rdp-table td {
+  display: table-cell;
+}
+
+.rdp-tbody tr>td,
+.rdp-thead tr>th {
+  padding: 0.1rem;
+}
+
+.rdp-day {
+  width: var(--rdp-cell-size);
+  height: var(--rdp-cell-size);
+  border-radius: 9999px;
+}
