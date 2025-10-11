@@ -15,6 +15,7 @@ export interface Accommodation {
     imageUrl: string;
     lightPollution: LightPollutionLevel;
     altitude: number;
+    bookingUrl: string;
 }
 
 interface AccommodationCardProps {
@@ -77,12 +78,14 @@ export function AccommodationCard({ accommodation }: AccommodationCardProps) {
                     </p>
                 </div>
 
-                <button
-                    type="button"
-                    className="w-full rounded-full bg-sky-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-sky-700"
+                <a
+                    href={accommodation.bookingUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block w-full rounded-full bg-sky-600 px-4 py-2 text-center text-sm font-medium text-white transition-colors hover:bg-sky-700"
                 >
                     予約する
-                </button>
+                </a>
             </div>
         </article>
     );

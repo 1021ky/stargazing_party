@@ -19,6 +19,7 @@ export interface RakutenHotelAccommodation {
     imageUrl: string;
     lightPollution: LightPollutionLevel;
     altitude: number;
+    bookingUrl: string;
 }
 
 interface RakutenApiResponseError {
@@ -50,6 +51,7 @@ interface RakutenHotelBasicInfo {
     hotelImageUrl?: string;
     hotelThumbnailUrl?: string;
     nearestStation?: string;
+    planListUrl?: string;
 }
 
 interface RakutenHotelDetailInfo {
@@ -246,6 +248,7 @@ function extractAccommodationFromWrapper(wrapper: RakutenHotelWrapper, stayDate:
         imageUrl,
         lightPollution: determineLightPollutionLevel(ratingInfo?.locationAverage, latitude),
         altitude,
+        bookingUrl: buildRakutenBookingUrl(basicInfo, stayDate),
     };
 }
 
@@ -380,6 +383,35 @@ function formatNextNewMoonDate(referenceDate = new Date()): string {
     const nextNewMoon = new Date(referenceNewMoon.getTime() + cycles * SYNODIC_MONTH_DAYS * msPerDay);
     const formatter = new Intl.DateTimeFormat('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
     return formatter.format(nextNewMoon);
+}
+
+function buildRakutenBookingUrl(info: RakutenHotelBasicInfo, stayDate: string): string {
+    // 楽天の API は planListUrl（施設のプラン一覧）を返すことがある。優先的に使用。
+    if (info.planListUrl && info.planListUrl.length > 0) {
+        try {
+            const u = new URL(info.planListUrl);
+            // 可能ならチェックイン/チェックアウトの日付をクエリに付与
+            u.searchParams.set('checkinDate', stayDate);
+            u.searchParams.set('checkoutDate', calculateCheckoutDate(stayDate));
+            return u.toString();
+        } catch {
+            // 無効 URL の場合はフォールバック
+        }
+    }
+
+    // planListUrl がない場合、hotelNo を使って汎用ページに遷移
+    const hotelNo = info.hotelNo ? String(info.hotelNo) : '';
+    if (hotelNo) {
+        const u = new URL('https://hotel.travel.rakuten.co.jp/hotelinfo/plan/');
+        u.searchParams.set('f_no', hotelNo);
+        u.searchParams.set('checkinDate', stayDate);
+        u.searchParams.set('checkoutDate', calculateCheckoutDate(stayDate));
+        return u.toString();
+    }
+
+    // それでもなければトップの検索ページにフォールバック
+    const u = new URL('https://travel.rakuten.co.jp/');
+    return u.toString();
 }
 
 
