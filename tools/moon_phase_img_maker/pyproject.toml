@@ -1,0 +1,21 @@
+[project]
+name = "moon-phase-img-maker"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "astronomy-engine>=2.1.19",
+    "pillow>=11.3.0",
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.18.2",
+    "ruff>=0.14.0",
+    "types-pillow>=10.2.0.20240822",
+]
+
+[tool.ruff]
+line-length=80
+exclude = ["venv", ".venv", "__pycache__", "out"]
