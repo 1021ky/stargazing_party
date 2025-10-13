@@ -2,6 +2,7 @@
 
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { DayPicker, type Matcher } from "react-day-picker";
+import { MoonDayButton } from "./MoonDayButton";
 
 interface SearchFormProps {
     onSearch: (year: string, month: string, day: string, prefecture: string) => void;
@@ -361,6 +362,7 @@ export function SearchForm({ onSearch }: SearchFormProps) {
                                             clear: { backgroundColor: '#eff6ff', color: '#0369a1' },
                                             selected: { backgroundColor: '#0284c7', color: '#fff' },
                                         }}
+                                        components={{ DayButton: MoonDayButton }}
                                         showOutsideDays={false}
                                     />
                                 </div>
