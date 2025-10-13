@@ -13,7 +13,6 @@ export interface Accommodation {
     rating: number;
     availableRooms: number;
     imageUrl: string;
-    lightPollution: LightPollutionLevel;
     altitude: number;
     bookingUrl: string;
 }
@@ -22,14 +21,15 @@ interface AccommodationCardProps {
     accommodation: Accommodation;
 }
 
-const lightPollutionStyles: Record<LightPollutionLevel, string> = {
-    低: "bg-emerald-100 text-emerald-900",
-    中: "bg-amber-100 text-amber-900",
-    高: "bg-rose-100 text-rose-900",
-};
+// const lightPollutionStyles: Record<LightPollutionLevel, string> = {
+//     低: "bg-emerald-100 text-emerald-900",
+//     中: "bg-amber-100 text-amber-900",
+//     高: "bg-rose-100 text-rose-900",
+// };
 
 export function AccommodationCard({ accommodation }: AccommodationCardProps) {
-    const badgeClass = lightPollutionStyles[accommodation.lightPollution] ?? "bg-slate-100 text-slate-900";
+    // TODO 光害レベルに応じたバッジのスタイルを適用する
+    // const badgeClass = lightPollutionStyles[accommodation.lightPollution] ?? "bg-slate-100 text-slate-900";
 
     return (
         <article className="overflow-hidden rounded-2xl border bg-white shadow-sm transition-shadow hover:shadow-lg">
@@ -40,9 +40,6 @@ export function AccommodationCard({ accommodation }: AccommodationCardProps) {
                     className="h-full w-full object-cover"
                     loading="lazy"
                 />
-                <span className={`absolute right-3 top-3 rounded-full px-3 py-1 text-xs font-semibold ${badgeClass}`}>
-                    光害: {accommodation.lightPollution}
-                </span>
             </div>
 
             <div className="space-y-4 px-6 py-5">

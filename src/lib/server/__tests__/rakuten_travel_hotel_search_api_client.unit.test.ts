@@ -97,7 +97,6 @@ describe('searchHotelsWithAvailability (unit)', () => {
             prefecture: '長野県',
             location: expect.stringContaining('松本市'),
             price: 18000,
-            lightPollution: '低',
         });
         expect(hotel.newMoonDate).toMatch(/\d{4}年\d+月\d+日/);
         expect(hotel.clearSkyProbability).toBeGreaterThanOrEqual(40);

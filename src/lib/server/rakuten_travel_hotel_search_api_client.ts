@@ -4,8 +4,6 @@ const MAX_RETRIES = 3;
 const SEARCH_RADIUS_KM = 3;
 const SYNODIC_MONTH_DAYS = 29.530588853;
 
-type LightPollutionLevel = '低' | '中' | '高';
-
 export interface RakutenHotelAccommodation {
     id: string;
     name: string;
@@ -17,7 +15,6 @@ export interface RakutenHotelAccommodation {
     rating: number;
     availableRooms: number;
     imageUrl: string;
-    lightPollution: LightPollutionLevel;
     altitude: number;
     bookingUrl: string;
 }
@@ -246,7 +243,6 @@ function extractAccommodationFromWrapper(wrapper: RakutenHotelWrapper, stayDate:
         rating,
         availableRooms,
         imageUrl,
-        lightPollution: determineLightPollutionLevel(ratingInfo?.locationAverage, latitude),
         altitude,
         bookingUrl: buildRakutenBookingUrl(basicInfo, stayDate),
     };
@@ -337,27 +333,6 @@ function estimateClearSkyProbability(reviewAverage: number, locationAverage?: nu
     const base = Number.isFinite(locationAverage) ? locationAverage ?? 0 : reviewAverage;
     const probability = Math.min(95, Math.max(40, Math.round(base * 18)));
     return probability;
-}
-
-function determineLightPollutionLevel(locationAverage?: number, latitude?: number | null): LightPollutionLevel {
-    if (Number.isFinite(locationAverage)) {
-        if ((locationAverage ?? 0) >= 4.5) {
-            return '低';
-        }
-        if ((locationAverage ?? 0) >= 3.5) {
-            return '中';
-        }
-        return '高';
-    }
-
-    if (typeof latitude === 'number') {
-        if (latitude >= 40 || latitude <= 30) {
-            return '低';
-        }
-        return '中';
-    }
-
-    return '中';
 }
 
 function estimateAltitudeFromLatitude(latitude: number): number {
