@@ -53,6 +53,7 @@ export function SearchForm({ onSearch }: SearchFormProps) {
     const [isCalendarOpen, setIsCalendarOpen] = useState<boolean>(false);
     const [isFetchingWeather, setIsFetchingWeather] = useState<boolean>(false);
     const [weatherError, setWeatherError] = useState<string | null>(null);
+    const [weatherNotice, setWeatherNotice] = useState<string | null>(null);
     const [annotation, setAnnotation] = useState<string | null>(null);
     const [validationMessage, setValidationMessage] = useState<string | null>(null);
 
@@ -95,6 +96,7 @@ export function SearchForm({ onSearch }: SearchFormProps) {
     useEffect(() => {
         weatherAbortControllerRef.current?.abort();
         setWeatherError(null);
+        setWeatherNotice(null);
         setWeatherWindow([]);
         setDateRange({ start: null, end: null });
         if (!selectedPrefecture) {
@@ -151,12 +153,19 @@ export function SearchForm({ onSearch }: SearchFormProps) {
                     start: typeof payload?.startDate === 'string' ? payload.startDate : null,
                     end: typeof payload?.endDate === 'string' ? payload.endDate : null,
                 });
+
+                if (payload?.availability === 'out_of_supported_range' && typeof payload?.message === 'string') {
+                    setWeatherNotice(payload.message);
+                } else {
+                    setWeatherNotice(null);
+                }
             } catch (error) {
                 if (controller.signal.aborted) {
                     return;
                 }
                 const message = error instanceof Error ? error.message : '晴れ予報の取得に失敗しました';
                 setWeatherError(`晴れ予報の取得に失敗しました: ${message}`);
+                setWeatherNotice(null);
                 setWeatherWindow([]);
             } finally {
                 if (!controller.signal.aborted) {
@@ -220,15 +229,21 @@ export function SearchForm({ onSearch }: SearchFormProps) {
         if (weatherError) {
             return weatherError;
         }
+        if (weatherNotice) {
+            return weatherNotice;
+        }
         if (!hasSelectableDays) {
             return '15日以内に晴れの予報が見つかりませんでした。';
         }
         return '晴れの日だけ選択できます。';
-    }, [selectedPrefecture, isFetchingWeather, weatherError, hasSelectableDays]);
+    }, [selectedPrefecture, isFetchingWeather, weatherError, weatherNotice, hasSelectableDays]);
 
     const calendarStatusClass = useMemo(() => {
         if (weatherError) {
             return 'text-rose-500';
+        }
+        if (weatherNotice) {
+            return 'text-amber-600';
         }
         if (!selectedPrefecture || isFetchingWeather) {
             return 'text-slate-500';
@@ -237,7 +252,7 @@ export function SearchForm({ onSearch }: SearchFormProps) {
             return 'text-amber-600';
         }
         return 'text-slate-500';
-    }, [weatherError, selectedPrefecture, isFetchingWeather, hasSelectableDays]);
+    }, [weatherError, weatherNotice, selectedPrefecture, isFetchingWeather, hasSelectableDays]);
 
     const handlePrefectureChange = (event: ChangeEvent<HTMLSelectElement>) => {
         const value = event.target.value;
