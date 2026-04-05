@@ -4,8 +4,8 @@ import { getPrefectureCoordinates } from '@/lib/server/prefecture_geocode';
 
 // TODO: WINDOWS_DAYSだけで実現する。
 const WINDOW_DAYS = 15;
-const PUBLIC_ALLOWED_MIN = process.env.NEXT_PUBLIC_OPEN_METEO_ALLOWED_START_DATE_MIN ?? '2025-07-10';
-const PUBLIC_ALLOWED_MAX = process.env.NEXT_PUBLIC_OPEN_METEO_ALLOWED_START_DATE_MAX ?? '2025-10-26';
+const PUBLIC_ALLOWED_MIN = process.env.NEXT_PUBLIC_OPEN_METEO_ALLOWED_START_DATE_MIN;
+const PUBLIC_ALLOWED_MAX = process.env.NEXT_PUBLIC_OPEN_METEO_ALLOWED_START_DATE_MAX;
 const SERVER_ALLOWED_MIN = process.env.OPEN_METEO_ALLOWED_START_DATE_MIN ?? PUBLIC_ALLOWED_MIN;
 const SERVER_ALLOWED_MAX = process.env.OPEN_METEO_ALLOWED_START_DATE_MAX ?? PUBLIC_ALLOWED_MAX;
 
@@ -17,34 +17,40 @@ interface ClearDaysResponseDay {
     temperatureMin: number;
 }
 
-function toIsoDate(date: Date): string {
+function toUtcIsoDate(date: Date): string {
     return date.toISOString().slice(0, 10);
 }
 
-function computeWindowBounds(): { start: string; end: string } {
-    const today = new Date();
-    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+function addDaysUtcIso(isoDate: string, days: number): string {
+    const date = new Date(`${isoDate}T00:00:00Z`);
+    date.setUTCDate(date.getUTCDate() + days);
+    return toUtcIsoDate(date);
+}
 
-    const minAllowed = new Date(`${SERVER_ALLOWED_MIN}T00:00:00Z`);
-    const maxAllowed = new Date(`${SERVER_ALLOWED_MAX}T00:00:00Z`);
+function maxIso(a: string, b: string): string {
+    return a > b ? a : b;
+}
 
-    const windowStartDate = todayStart > minAllowed ? todayStart : minAllowed;
-    const tentativeEnd = new Date(windowStartDate);
-    tentativeEnd.setDate(tentativeEnd.getDate() + (WINDOW_DAYS - 1));
+function minIso(a: string, b: string): string {
+    return a < b ? a : b;
+}
 
-    const windowEndDate = tentativeEnd < maxAllowed ? tentativeEnd : maxAllowed;
+function computeWindowBounds(): { start: string | null; end: string | null; isOutOfSupportedRange: boolean } {
+    const todayIso = toUtcIsoDate(new Date());
 
-    if (windowEndDate < windowStartDate) {
-        return {
-            start: toIsoDate(windowStartDate),
-            end: toIsoDate(windowStartDate),
-        };
+    if (SERVER_ALLOWED_MAX && todayIso > SERVER_ALLOWED_MAX) {
+        return { start: null, end: null, isOutOfSupportedRange: true };
     }
 
-    return {
-        start: toIsoDate(windowStartDate),
-        end: toIsoDate(windowEndDate),
-    };
+    const start = SERVER_ALLOWED_MIN ? maxIso(todayIso, SERVER_ALLOWED_MIN) : todayIso;
+    const tentativeEnd = addDaysUtcIso(start, WINDOW_DAYS - 1);
+    const end = SERVER_ALLOWED_MAX ? minIso(tentativeEnd, SERVER_ALLOWED_MAX) : tentativeEnd;
+
+    if (end < start) {
+        return { start: null, end: null, isOutOfSupportedRange: true };
+    }
+
+    return { start, end, isOutOfSupportedRange: false };
 }
 
 export async function GET(request: Request) {
@@ -62,14 +68,16 @@ export async function GET(request: Request) {
         }
 
         const windowBounds = computeWindowBounds();
-        const { start, end } = windowBounds;
+        const { start, end, isOutOfSupportedRange } = windowBounds;
 
-        if (start > end) {
+        if (isOutOfSupportedRange || !start || !end) {
             return NextResponse.json({
                 prefecture,
-                startDate: start,
-                endDate: end,
+                startDate: null,
+                endDate: null,
                 days: [] as ClearDaysResponseDay[],
+                availability: 'out_of_supported_range',
+                message: '現在の提供期間外のため晴れ予報を表示できません。',
             });
         }
 

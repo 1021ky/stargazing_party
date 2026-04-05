@@ -10,10 +10,8 @@ const HOURLY_VARIABLES = 'weather_code,is_day,temperature_2m';
 const MAX_FETCH_RETRIES = 3;
 const RETRY_DELAY_MS = 1_000;
 
-// Open‑Meteo が許容する start_date の範囲（API の仕様 / 応答に基づく）
-// 注意: 将来的に変わる可能性があるため、必要なら環境変数や設定で上書きできるようにする。
-const OPEN_METEO_ALLOWED_START_DATE_MIN = process.env.OPEN_METEO_ALLOWED_START_DATE_MIN ?? '2025-07-10';
-const OPEN_METEO_ALLOWED_START_DATE_MAX = process.env.OPEN_METEO_ALLOWED_START_DATE_MAX ?? '2025-10-26';
+const OPEN_METEO_ALLOWED_START_DATE_MIN = process.env.OPEN_METEO_ALLOWED_START_DATE_MIN;
+const OPEN_METEO_ALLOWED_START_DATE_MAX = process.env.OPEN_METEO_ALLOWED_START_DATE_MAX;
 
 export interface DailyWeatherSummary {
     /** 対象日 (ISO 8601, YYYY-MM-DD) */
@@ -40,12 +38,13 @@ export async function getDailyWeatherSummary(
 
     const targetDateIso = normaliseDate(date);
 
-    // Open-Meteo の仕様により start_date は利用可能なレンジに限定される。
-    // ここで明示的にバリデーションを行い、クライアント側で早期にエラーを返す。
     const minAllowed = OPEN_METEO_ALLOWED_START_DATE_MIN;
     const maxAllowed = OPEN_METEO_ALLOWED_START_DATE_MAX;
-    if (targetDateIso < minAllowed || targetDateIso > maxAllowed) {
-        throw new RangeError(`start_date must be within ${minAllowed} and ${maxAllowed}`);
+    if (minAllowed && targetDateIso < minAllowed) {
+        throw new RangeError(`start_date must be on or after ${minAllowed}`);
+    }
+    if (maxAllowed && targetDateIso > maxAllowed) {
+        throw new RangeError(`start_date must be on or before ${maxAllowed}`);
     }
 
     const responses = await fetchWeatherWithRetry({
@@ -87,8 +86,11 @@ export async function getDailyWeatherSummariesRange(
 
     const minAllowed = OPEN_METEO_ALLOWED_START_DATE_MIN;
     const maxAllowed = OPEN_METEO_ALLOWED_START_DATE_MAX;
-    if (startIso < minAllowed || endIso > maxAllowed) {
-        throw new RangeError(`date range must be within ${minAllowed} and ${maxAllowed}`);
+    if (minAllowed && startIso < minAllowed) {
+        throw new RangeError(`date range start must be on or after ${minAllowed}`);
+    }
+    if (maxAllowed && endIso > maxAllowed) {
+        throw new RangeError(`date range end must be on or before ${maxAllowed}`);
     }
 
     const responses = await fetchWeatherWithRetry({
