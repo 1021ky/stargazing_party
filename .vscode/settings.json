@@ -1,0 +1,16 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^git add src/app/_components/SearchForm\\.tsx src/app/api/prefecture/clear-days/route\\.ts src/lib/server/open_metro_api_client\\.ts src/app/api/prefecture/clear-days/__tests__/route\\.test\\.ts && git status -sb$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^git commit -m \"fix: handle out-of-range weather window for clear-days\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd /Users/ksanchu/ghq/github\\.com/1021ky/stargazing_party && mkdir -p tmp && cat > tmp/pr-7\\.md <<'EOF'\n## Summary\n- clear-days API の期間計算を UTC ISO ベースに変更\n- 提供期間外の場合は 200 \\+ `days: \\[\\]` と `availability: out_of_supported_range` を返すように変更\n- UI で提供期間外通知をエラー表示と分離して表示\n- 回帰防止として route テストを追加（today > maxAllowed で外部API未呼び出し）\n\n## Why\n本番で許容日付レンジ超過時に 400 が返り、都道府県選択で晴れ予報が取得できなくなる問題を恒久対応するため。\n\n## Test\n- `src/app/api/prefecture/clear-days/__tests__/route\\.test\\.ts`\n- `src/lib/server/__tests__/open_metro_api_client\\.unit\\.test\\.ts`\n\nCloses #7\nEOF\n\ngh pr create --repo 1021ky/stargazing_party --base main --head fix/7-open-meteo-date-range --title \"fix: handle out-of-range weather window in clear-days API\" --body-file tmp/pr-7\\.md$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}
