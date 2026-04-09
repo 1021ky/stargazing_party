@@ -25,8 +25,8 @@ export function PrefectureMapCanvas({
     <MapContainer
       center={[36.2048, 138.2529]}
       zoom={5}
-      className="h-72 w-full rounded-2xl border border-slate-200"
-      scrollWheelZoom={false}
+      className="h-full w-full"
+      scrollWheelZoom
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'

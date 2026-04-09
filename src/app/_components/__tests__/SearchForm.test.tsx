@@ -59,7 +59,7 @@ describe("SearchForm", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: "星空観察に適した宿を検索" }),
+        screen.getByRole("button", { name: "表示エリアで宿を検索" }),
       ).toBeEnabled();
     });
   });
@@ -69,7 +69,7 @@ describe("SearchForm", () => {
     render(<SearchForm onSearch={onSearch} />);
 
     const submitButton = screen.getByRole("button", {
-      name: "星空観察に適した宿を検索",
+      name: "表示エリアで宿を検索",
     });
     expect(submitButton).toBeDisabled();
   });

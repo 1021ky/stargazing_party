@@ -70,19 +70,29 @@ export function PrefectureMapPicker({
   }, []);
 
   if (errorMessage) {
-    return <p className="text-xs text-rose-500">{errorMessage}</p>;
+    return (
+      <div className="flex h-full items-center justify-center bg-slate-900">
+        <p className="rounded-lg bg-white/90 px-3 py-2 text-xs text-rose-500">
+          {errorMessage}
+        </p>
+      </div>
+    );
   }
 
   if (!geojson) {
     return (
-      <p className="text-xs text-slate-500">地図データを読み込み中です…</p>
+      <div className="flex h-full items-center justify-center bg-slate-900">
+        <p className="rounded-lg bg-white/90 px-3 py-2 text-xs text-slate-500">
+          地図データを読み込み中です…
+        </p>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-2">
+    <div className="relative h-full w-full">
       <PrefectureMapCanvas geojson={geojson} onPick={onChange} />
-      <p className="text-xs text-slate-500">選択中: {value || "未選択"}</p>
+      <p className="sr-only">選択中: {value || "未選択"}</p>
     </div>
   );
 }

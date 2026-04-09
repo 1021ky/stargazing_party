@@ -47,6 +47,8 @@ function formatJapaneseDate(value: string): string {
 export function SearchForm({ onSearch }: SearchFormProps) {
   const [selectedPrefecture, setSelectedPrefecture] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<string>("");
+  const [maxPrice, setMaxPrice] = useState<string>("指定なし");
+  const [minRating, setMinRating] = useState<string>("指定なし");
   const [weatherWindow, setWeatherWindow] = useState<WeatherWindowDay[]>([]);
   const [dateRange, setDateRange] = useState<{
     start: string | null;
@@ -332,7 +334,7 @@ export function SearchForm({ onSearch }: SearchFormProps) {
     event.preventDefault();
 
     if (!selectedPrefecture) {
-      setValidationMessage("都道府県を選択してください。");
+      setValidationMessage("地図を操作して検索エリアを選択してください。");
       return;
     }
 
@@ -364,96 +366,128 @@ export function SearchForm({ onSearch }: SearchFormProps) {
   };
 
   return (
-    <section className="mx-auto w-full max-w-3xl">
-      <div className="rounded-3xl border bg-white p-6 shadow-sm">
-        <h2 className="text-center text-lg font-semibold">
-          星空観察 宿泊施設検索
-        </h2>
-        <form className="mt-6 grid gap-6" onSubmit={handleSubmit}>
-          <div className="grid gap-2 text-sm font-medium text-slate-700">
-            <span>都道府県</span>
-            <PrefectureMapPicker
-              value={selectedPrefecture}
-              onChange={handlePrefectureChange}
-            />
-          </div>
+    <section className="relative h-full w-full overflow-hidden bg-slate-900">
+      <PrefectureMapPicker
+        value={selectedPrefecture}
+        onChange={handlePrefectureChange}
+      />
 
-          <label className="grid gap-2 text-sm font-medium text-slate-700">
-            <span>日付</span>
-            <div ref={calendarContainerRef} className="relative">
-              <input
-                type="text"
-                name="date-display"
-                readOnly
-                value={selectedDate ? formatJapaneseDate(selectedDate) : ""}
-                placeholder={
-                  selectedPrefecture
-                    ? "晴れの日を選択してください"
-                    : "先に都道府県を選択してください"
-                }
-                onFocus={() => {
-                  if (selectedPrefecture) {
-                    setIsCalendarOpen(true);
+      <div className="pointer-events-none absolute inset-x-3 top-3 z-[500] sm:inset-x-auto sm:left-4 sm:w-[25rem] lg:w-[24rem]">
+        <div className="pointer-events-auto rounded-2xl border border-white/45 bg-white/78 p-4 shadow-xl backdrop-blur-md">
+          <h1 className="text-xl font-bold tracking-tight text-slate-900">
+            星空宿泊マップ検索
+          </h1>
+          <p className="mt-1 text-xs leading-relaxed text-slate-700">
+            地図をクリックして検索エリアを選び、表示エリアに合わせた日付と条件で宿を探します。
+          </p>
+
+          <form className="mt-4 grid gap-4" onSubmit={handleSubmit}>
+            <label className="grid gap-2 text-sm font-medium text-slate-700">
+              <span>日付</span>
+              <div ref={calendarContainerRef} className="relative">
+                <input
+                  type="text"
+                  name="date-display"
+                  readOnly
+                  value={selectedDate ? formatJapaneseDate(selectedDate) : ""}
+                  placeholder={
+                    selectedPrefecture
+                      ? "晴れの日を選択してください"
+                      : "先に地図でエリアを選択してください"
                   }
-                }}
-                onClick={() => {
-                  if (selectedPrefecture) {
-                    setIsCalendarOpen(true);
-                  }
-                }}
-                className="w-full cursor-pointer rounded-full border border-slate-200 px-4 py-2 text-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100 disabled:cursor-not-allowed disabled:bg-slate-100"
-                disabled={!selectedPrefecture}
-                aria-haspopup="dialog"
-              />
-              <input type="hidden" name="date" value={selectedDate} />
-              {isCalendarOpen ? (
-                <div
-                  id="date-picker-popover"
-                  className="absolute left-0 top-12 z-20 w-[22rem] rounded-2xl border border-slate-200 bg-white p-3 shadow-lg"
-                >
-                  <DayPicker
-                    mode="single"
-                    selected={selectedDateObj}
-                    onSelect={handleDaySelect}
-                    fromDate={fromDate}
-                    toDate={toDate}
-                    disabled={disabledMatchers}
-                    modifiers={modifiers}
-                    modifiersStyles={{
-                      clear: { backgroundColor: "#eff6ff", color: "#0369a1" },
-                      selected: { backgroundColor: "#0284c7", color: "#fff" },
-                    }}
-                    components={{ DayButton: MoonDayButton }}
-                    showOutsideDays={false}
-                  />
-                </div>
+                  onFocus={() => {
+                    if (selectedPrefecture) {
+                      setIsCalendarOpen(true);
+                    }
+                  }}
+                  onClick={() => {
+                    if (selectedPrefecture) {
+                      setIsCalendarOpen(true);
+                    }
+                  }}
+                  className="w-full cursor-pointer rounded-xl border border-slate-200 bg-white/95 px-3 py-2 text-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                  disabled={!selectedPrefecture}
+                  aria-haspopup="dialog"
+                />
+                <input type="hidden" name="date" value={selectedDate} />
+                {isCalendarOpen ? (
+                  <div
+                    id="date-picker-popover"
+                    className="absolute left-0 top-12 z-20 w-[21rem] rounded-2xl border border-slate-200 bg-white p-3 shadow-lg"
+                  >
+                    <DayPicker
+                      mode="single"
+                      selected={selectedDateObj}
+                      onSelect={handleDaySelect}
+                      fromDate={fromDate}
+                      toDate={toDate}
+                      disabled={disabledMatchers}
+                      modifiers={modifiers}
+                      modifiersStyles={{
+                        clear: { backgroundColor: "#eff6ff", color: "#0369a1" },
+                        selected: { backgroundColor: "#0284c7", color: "#fff" },
+                      }}
+                      components={{ DayButton: MoonDayButton }}
+                      showOutsideDays={false}
+                    />
+                  </div>
+                ) : null}
+              </div>
+              {annotation ? (
+                <p className="text-xs text-rose-600">{annotation}</p>
               ) : null}
-            </div>
-            {annotation ? (
-              <p className="text-xs text-rose-500">{annotation}</p>
-            ) : null}
-            {validationMessage ? (
-              <p className="text-xs text-rose-500">{validationMessage}</p>
-            ) : null}
-            {calendarStatusMessage ? (
-              <p className={`text-xs ${calendarStatusClass}`}>
-                {calendarStatusMessage}
-              </p>
-            ) : null}
-          </label>
+              {validationMessage ? (
+                <p className="text-xs text-rose-600">{validationMessage}</p>
+              ) : null}
+              {calendarStatusMessage ? (
+                <p className={`text-xs ${calendarStatusClass}`}>
+                  {calendarStatusMessage}
+                </p>
+              ) : null}
+            </label>
 
-          <button
-            type="submit"
-            className="w-full rounded-full bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={
-              !selectedPrefecture ||
-              isFetchingWeather ||
-              (!isSelectedDateSunny && !!selectedDate)
-            }
-          >
-            星空観察に適した宿を検索
-          </button>
-        </form>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="grid gap-1 text-xs font-medium text-slate-700">
+                <span>価格</span>
+                <select
+                  value={maxPrice}
+                  onChange={(event) => setMaxPrice(event.target.value)}
+                  className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700"
+                >
+                  <option>指定なし</option>
+                  <option>¥10,000以下</option>
+                  <option>¥20,000以下</option>
+                  <option>¥30,000以下</option>
+                </select>
+              </label>
+              <label className="grid gap-1 text-xs font-medium text-slate-700">
+                <span>評価</span>
+                <select
+                  value={minRating}
+                  onChange={(event) => setMinRating(event.target.value)}
+                  className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700"
+                >
+                  <option>指定なし</option>
+                  <option>4.5以上</option>
+                  <option>4.0以上</option>
+                  <option>3.5以上</option>
+                </select>
+              </label>
+            </div>
+
+            <button
+              type="submit"
+              className="w-full rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={
+                !selectedPrefecture ||
+                isFetchingWeather ||
+                (!isSelectedDateSunny && !!selectedDate)
+              }
+            >
+              表示エリアで宿を検索
+            </button>
+          </form>
+        </div>
       </div>
     </section>
   );

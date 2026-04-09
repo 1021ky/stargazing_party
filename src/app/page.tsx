@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Star } from "lucide-react";
 import { Accommodation } from "./_components/AccommodationCard";
 import { SearchForm } from "./_components/SearchForm";
 import { SearchResults } from "./_components/SearchResults";
@@ -108,28 +107,21 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 px-4 py-10 sm:px-6 lg:px-8">
-      <header className="mx-auto max-w-3xl text-center">
-        <div className="flex items-center justify-center gap-3 text-sky-500">
-          <Star className="h-8 w-8 fill-sky-400" />
-          <h1 className="text-3xl font-bold text-slate-800 sm:text-4xl">星空宿泊検索</h1>
-          <Star className="h-8 w-8 fill-sky-400" />
+    <div className="h-screen overflow-hidden bg-slate-100">
+      <main className="grid h-full grid-rows-[54dvh_46dvh] lg:grid-cols-2 lg:grid-rows-1">
+        <div className="min-h-0">
+          <SearchForm onSearch={handleSearch} />
         </div>
-        <p className="mt-4 text-sm text-slate-600 sm:text-base">
-          選択した地域で星が見やすい日に宿泊できる施設を検索します。星を見る会を開きましょう！
-        </p>
-      </header>
-
-      <main className="mx-auto mt-10 flex w-full max-w-6xl flex-col gap-10">
-        <SearchForm onSearch={handleSearch} />
-        <SearchResults
-          accommodations={accommodations}
-          isLoading={isLoading}
-          searchParams={searchParams}
-          errorMessage={errorMessage}
-          resolvedAddress={searchMetadata?.resolvedAddress ?? null}
-          weather={searchMetadata?.weather ?? null}
-        />
+        <div className="min-h-0 overflow-y-auto border-t border-slate-200 bg-slate-50 lg:border-l lg:border-t-0">
+          <SearchResults
+            accommodations={accommodations}
+            isLoading={isLoading}
+            searchParams={searchParams}
+            errorMessage={errorMessage}
+            resolvedAddress={searchMetadata?.resolvedAddress ?? null}
+            weather={searchMetadata?.weather ?? null}
+          />
+        </div>
       </main>
     </div>
   );
