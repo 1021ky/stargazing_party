@@ -1,7 +1,15 @@
 "use client";
 
 import type { FeatureCollection, Geometry } from "geojson";
-import { GeoJSON, MapContainer, TileLayer } from "react-leaflet";
+import { useEffect } from "react";
+import { GeoJSON, MapContainer, TileLayer, useMap } from "react-leaflet";
+
+export interface MapSearchBounds {
+  minLatitude: number;
+  maxLatitude: number;
+  minLongitude: number;
+  maxLongitude: number;
+}
 
 type PrefectureProperties = {
   prefecture?: string;
@@ -15,11 +23,13 @@ type PrefectureFeatureCollection = FeatureCollection<
 interface PrefectureMapCanvasProps {
   geojson: PrefectureFeatureCollection;
   onPick: (prefecture: string) => void;
+  onBoundsChange?: (bounds: MapSearchBounds) => void;
 }
 
 export function PrefectureMapCanvas({
   geojson,
   onPick,
+  onBoundsChange,
 }: PrefectureMapCanvasProps) {
   return (
     <MapContainer
@@ -28,6 +38,7 @@ export function PrefectureMapCanvas({
       className="h-full w-full"
       scrollWheelZoom
     >
+      <MapBoundsObserver onBoundsChange={onBoundsChange} />
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -48,4 +59,37 @@ export function PrefectureMapCanvas({
       />
     </MapContainer>
   );
+}
+
+function MapBoundsObserver({
+  onBoundsChange,
+}: {
+  onBoundsChange?: (bounds: MapSearchBounds) => void;
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!onBoundsChange) {
+      return;
+    }
+
+    const reportBounds = () => {
+      const leafletBounds = map.getBounds();
+      onBoundsChange({
+        minLatitude: leafletBounds.getSouth(),
+        maxLatitude: leafletBounds.getNorth(),
+        minLongitude: leafletBounds.getWest(),
+        maxLongitude: leafletBounds.getEast(),
+      });
+    };
+
+    reportBounds();
+    map.on("moveend", reportBounds);
+
+    return () => {
+      map.off("moveend", reportBounds);
+    };
+  }, [map, onBoundsChange]);
+
+  return null;
 }

@@ -7,10 +7,12 @@ import {
   loadPrefectureGeoJSON,
   mapDataProviderErrors,
 } from "./map_data_provider";
+import type { MapSearchBounds } from "./PrefectureMapCanvas";
 
 interface PrefectureMapPickerProps {
   value: string;
   onChange: (prefecture: string) => void;
+  onBoundsChange?: (bounds: MapSearchBounds) => void;
 }
 
 type PrefectureProperties = {
@@ -38,6 +40,7 @@ const PrefectureMapCanvas = dynamic(
 export function PrefectureMapPicker({
   value,
   onChange,
+  onBoundsChange,
 }: PrefectureMapPickerProps) {
   const [geojson, setGeojson] = useState<PrefectureFeatureCollection | null>(
     null,
@@ -91,7 +94,11 @@ export function PrefectureMapPicker({
 
   return (
     <div className="relative h-full w-full">
-      <PrefectureMapCanvas geojson={geojson} onPick={onChange} />
+      <PrefectureMapCanvas
+        geojson={geojson}
+        onPick={onChange}
+        onBoundsChange={onBoundsChange}
+      />
       <p className="sr-only">選択中: {value || "未選択"}</p>
     </div>
   );

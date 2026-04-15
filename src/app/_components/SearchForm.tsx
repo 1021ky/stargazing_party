@@ -3,7 +3,18 @@
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { DayPicker, type Matcher } from "react-day-picker";
 import { MoonDayButton } from "./MoonDayButton";
+import type { MapSearchBounds } from "./PrefectureMapCanvas";
 import { PrefectureMapPicker } from "./PrefectureMapPicker";
+
+interface SearchFilters {
+  maxPrice?: number;
+  minRating?: number;
+}
+
+interface SearchRequestOptions {
+  bounds?: MapSearchBounds;
+  filters?: SearchFilters;
+}
 
 interface SearchFormProps {
   onSearch: (
@@ -11,6 +22,7 @@ interface SearchFormProps {
     month: string,
     day: string,
     prefecture: string,
+    options: SearchRequestOptions,
   ) => void;
 }
 
@@ -49,6 +61,9 @@ export function SearchForm({ onSearch }: SearchFormProps) {
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [maxPrice, setMaxPrice] = useState<string>("指定なし");
   const [minRating, setMinRating] = useState<string>("指定なし");
+  const [searchBounds, setSearchBounds] = useState<MapSearchBounds | null>(
+    null,
+  );
   const [weatherWindow, setWeatherWindow] = useState<WeatherWindowDay[]>([]);
   const [dateRange, setDateRange] = useState<{
     start: string | null;
@@ -356,11 +371,16 @@ export function SearchForm({ onSearch }: SearchFormProps) {
 
     const [year, month, day] = selectedDate.split("-");
     if (year && month && day) {
+      const filters = buildSearchFilters(maxPrice, minRating);
       onSearch(
         year,
         String(Number(month)),
         String(Number(day)),
         selectedPrefecture,
+        {
+          bounds: searchBounds ?? undefined,
+          filters,
+        },
       );
     }
   };
@@ -370,6 +390,7 @@ export function SearchForm({ onSearch }: SearchFormProps) {
       <PrefectureMapPicker
         value={selectedPrefecture}
         onChange={handlePrefectureChange}
+        onBoundsChange={setSearchBounds}
       />
 
       <div className="pointer-events-none absolute inset-x-3 top-3 z-[500] sm:inset-x-auto sm:left-4 sm:w-[25rem] lg:w-[24rem]">
@@ -491,4 +512,34 @@ export function SearchForm({ onSearch }: SearchFormProps) {
       </div>
     </section>
   );
+}
+
+function buildSearchFilters(
+  maxPriceLabel: string,
+  minRatingLabel: string,
+): SearchFilters | undefined {
+  const maxPriceMap: Record<string, number | undefined> = {
+    指定なし: undefined,
+    "¥10,000以下": 10000,
+    "¥20,000以下": 20000,
+    "¥30,000以下": 30000,
+  };
+  const minRatingMap: Record<string, number | undefined> = {
+    指定なし: undefined,
+    "4.5以上": 4.5,
+    "4.0以上": 4.0,
+    "3.5以上": 3.5,
+  };
+
+  const maxPrice = maxPriceMap[maxPriceLabel];
+  const minRating = minRatingMap[minRatingLabel];
+
+  if (typeof maxPrice === "undefined" && typeof minRating === "undefined") {
+    return undefined;
+  }
+
+  return {
+    maxPrice,
+    minRating,
+  };
 }
