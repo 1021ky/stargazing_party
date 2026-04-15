@@ -34,7 +34,7 @@ export function PrefectureMapCanvas({
   return (
     <MapContainer
       center={[36.2048, 138.2529]}
-      zoom={5}
+      zoom={6}
       className="h-full w-full"
       scrollWheelZoom
     >
