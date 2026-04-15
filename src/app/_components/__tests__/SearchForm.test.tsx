@@ -4,16 +4,21 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SearchForm } from "../SearchForm";
 
+const dayPickerSpy = jest.fn();
+
 jest.mock("react-day-picker", () => ({
-  DayPicker: ({ onSelect }: { onSelect: (day: Date) => void }) => (
-    <button
-      type="button"
-      onClick={() => onSelect(new Date(2026, 3, 8))}
-      aria-label="2026-04-08"
-    >
-      2026-04-08を選択
-    </button>
-  ),
+  DayPicker: (props: { onSelect: (day: Date) => void }) => {
+    dayPickerSpy(props);
+    return (
+      <button
+        type="button"
+        onClick={() => props.onSelect(new Date(2026, 3, 8))}
+        aria-label="2026-04-08"
+      >
+        2026-04-08を選択
+      </button>
+    );
+  },
 }));
 
 jest.mock("../PrefectureMapPicker", () => ({
@@ -71,6 +76,28 @@ describe("SearchForm", () => {
   afterEach(() => {
     global.fetch = originalFetch;
     jest.resetAllMocks();
+  });
+
+  it("晴れ日スタイルを DayPicker へ渡す", async () => {
+    render(<SearchForm onSearch={jest.fn()} />);
+
+    const user = userEvent.setup();
+    await user.click(screen.getByText("地図で長野県を選択"));
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalled();
+    });
+
+    await user.click(screen.getByPlaceholderText("晴れの日を選択してください"));
+
+    await waitFor(() => {
+      expect(dayPickerSpy).toHaveBeenCalled();
+    });
+
+    const lastCall = dayPickerSpy.mock.calls.at(-1)?.[0];
+    expect(lastCall?.modifiersStyles?.clear).toEqual({
+      color: "#0284c7",
+    });
   });
 
   it("地図選択で都道府県が更新され、晴れ予報取得を開始する", async () => {

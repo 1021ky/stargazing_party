@@ -445,7 +445,7 @@ export function SearchForm({ onSearch }: SearchFormProps) {
                       disabled={disabledMatchers}
                       modifiers={modifiers}
                       modifiersStyles={{
-                        clear: { backgroundColor: "#eff6ff", color: "#0369a1" },
+                        clear: { color: "#0284c7" },
                         selected: { backgroundColor: "#0284c7", color: "#fff" },
                       }}
                       components={{ DayButton: MoonDayButton }}
