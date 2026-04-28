@@ -2,7 +2,7 @@
 
 import type { FeatureCollection, Geometry } from "geojson";
 import { useEffect } from "react";
-import { GeoJSON, MapContainer, TileLayer, useMap } from "react-leaflet";
+import { GeoJSON, MapContainer, TileLayer, WMSTileLayer, useMap } from "react-leaflet";
 
 export interface MapSearchBounds {
   minLatitude: number;
@@ -42,6 +42,15 @@ export function PrefectureMapCanvas({
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      />
+      <WMSTileLayer
+        url="https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?TIME=2012-01-01"
+        layers="VIIRS_CityLights_2012"
+        format="image/jpeg"
+        transparent={false}
+        version="1.1.1"
+        attribution='Nighttime imagery: <a href="https://earthdata.nasa.gov/gibs">NASA ESDIS GIBS</a>'
+        opacity={0.3}
       />
       <GeoJSON
         data={geojson}

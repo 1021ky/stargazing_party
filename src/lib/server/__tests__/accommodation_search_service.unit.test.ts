@@ -16,6 +16,10 @@ jest.mock("../rakuten_travel_hotel_search_api_client", () => ({
     searchHotelsWithAvailability: jest.fn(),
 }));
 
+jest.mock("../light_pollution_service", () => ({
+    resolveLightPollution: jest.fn(),
+}));
+
 describe("searchStargazingAccommodations", () => {
     const { getPrefectureCoordinates } = jest.requireMock(
         "../prefecture_geocode",
@@ -28,6 +32,9 @@ describe("searchStargazingAccommodations", () => {
     );
     const { searchHotelsWithAvailability } = jest.requireMock(
         "../rakuten_travel_hotel_search_api_client",
+    );
+    const { resolveLightPollution } = jest.requireMock(
+        "../light_pollution_service",
     );
 
     beforeEach(() => {
@@ -59,6 +66,9 @@ describe("searchStargazingAccommodations", () => {
                 imageUrl: "https://example.com/a.jpg",
                 lightPollution: "低",
                 altitude: 50,
+                bookingUrl: "https://example.com/a",
+                latitude: 35.69,
+                longitude: 139.75,
             },
             {
                 id: "2",
@@ -73,8 +83,16 @@ describe("searchStargazingAccommodations", () => {
                 imageUrl: "https://example.com/b.jpg",
                 lightPollution: "中",
                 altitude: 40,
+                bookingUrl: "https://example.com/b",
+                latitude: 35.67,
+                longitude: 139.77,
             },
         ]);
+        resolveLightPollution.mockResolvedValue({
+            lightPollutionProxy: 35,
+            lightPollutionLevel: "低",
+            lightPollutionSource: "black-marble-vnp46a4",
+        });
     });
 
     it("天気が晴れの場合に、空き室があるホテルを返す", async () => {
@@ -87,6 +105,7 @@ describe("searchStargazingAccommodations", () => {
         expect(result.accommodations[0]).toMatchObject({
             id: "1",
             name: "ホテルA",
+            lightPollutionLevel: "低",
         });
         expect(result.resolvedAddress).toBe("東京都千代田区千代田1-1");
         expect(getPrefectureCoordinates).toHaveBeenCalledWith("東京都");
@@ -104,9 +123,13 @@ describe("searchStargazingAccommodations", () => {
             139.69167,
             ["2025-02-01"],
         );
+        expect(resolveLightPollution).toHaveBeenCalledWith({
+            latitude: 35.69,
+            longitude: 139.75,
+        });
     });
 
-    it("天気が晴れでない場合は空配列を返す", async () => {
+    it("天気が晴れでない場合もホテル候補を返す", async () => {
         getDailyWeatherSummary.mockResolvedValueOnce({
             date: "2025-02-01",
             isClearSky: false,
@@ -121,7 +144,35 @@ describe("searchStargazingAccommodations", () => {
             prefecture: "東京都",
         });
 
+        expect(result.accommodations).toHaveLength(1);
+        expect(result.weather).toMatchObject({
+            isClearSky: false,
+            weatherCode: 3,
+        });
+        expect(searchHotelsWithAvailability).toHaveBeenCalledWith(
+            35.68944,
+            139.69167,
+            ["2025-02-01"],
+        );
+    });
+
+    it("宿泊 API が失敗しても空配列で結果を返す", async () => {
+        searchHotelsWithAvailability.mockRejectedValueOnce(
+            new Error("Unexpected status code: 429"),
+        );
+
+        const result = await searchStargazingAccommodations({
+            date: "2025-02-01",
+            prefecture: "東京都",
+        });
+
         expect(result.accommodations).toHaveLength(0);
+        expect(result.resolvedAddress).toBe("東京都千代田区千代田1-1");
+        expect(result.weather).toMatchObject({
+            date: "2025-02-01",
+            isClearSky: true,
+            weatherCode: 0,
+        });
     });
 
     it("都道府県がサポート対象外の場合は例外を投げる", async () => {
@@ -184,6 +235,9 @@ describe("searchStargazingAccommodations", () => {
                 imageUrl: "https://example.com/a.jpg",
                 lightPollution: "低",
                 altitude: 50,
+                bookingUrl: "https://example.com/a",
+                latitude: 35.69,
+                longitude: 139.75,
             },
             {
                 id: "2",
@@ -198,6 +252,9 @@ describe("searchStargazingAccommodations", () => {
                 imageUrl: "https://example.com/b.jpg",
                 lightPollution: "低",
                 altitude: 45,
+                bookingUrl: "https://example.com/b",
+                latitude: 35.67,
+                longitude: 139.77,
             },
             {
                 id: "3",
@@ -212,6 +269,9 @@ describe("searchStargazingAccommodations", () => {
                 imageUrl: "https://example.com/c.jpg",
                 lightPollution: "中",
                 altitude: 30,
+                bookingUrl: "https://example.com/c",
+                latitude: 35.66,
+                longitude: 139.74,
             },
         ]);
 
@@ -228,6 +288,26 @@ describe("searchStargazingAccommodations", () => {
         expect(result.accommodations[0]).toMatchObject({
             id: "1",
             name: "ホテルA",
+        });
+    });
+
+    it("光害情報取得が失敗しても検索結果を返す", async () => {
+        resolveLightPollution.mockResolvedValueOnce({
+            lightPollutionProxy: null,
+            lightPollutionLevel: "不明",
+            lightPollutionSource: "fallback",
+        });
+
+        const result = await searchStargazingAccommodations({
+            date: "2025-02-01",
+            prefecture: "東京都",
+        });
+
+        expect(result.accommodations).toHaveLength(1);
+        expect(result.accommodations[0]).toMatchObject({
+            lightPollutionLevel: "不明",
+            lightPollutionSource: "fallback",
+            lightPollutionProxy: null,
         });
     });
 });

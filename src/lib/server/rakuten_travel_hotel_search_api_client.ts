@@ -17,6 +17,8 @@ export interface RakutenHotelAccommodation {
     imageUrl: string;
     altitude: number;
     bookingUrl: string;
+    latitude: number | null;
+    longitude: number | null;
 }
 
 interface RakutenApiResponseError {
@@ -229,6 +231,7 @@ function extractAccommodationFromWrapper(wrapper: RakutenHotelWrapper, stayDate:
     const availableRooms = detailInfo?.roomCount && detailInfo.roomCount > 0 ? detailInfo.roomCount : 1;
 
     const latitude = typeof basicInfo.latitude === 'number' ? basicInfo.latitude : null;
+    const longitude = typeof basicInfo.longitude === 'number' ? basicInfo.longitude : null;
     const altitude = latitude !== null ? estimateAltitudeFromLatitude(latitude) : 0;
     const imageUrl = chooseImageUrl(basicInfo);
 
@@ -245,6 +248,8 @@ function extractAccommodationFromWrapper(wrapper: RakutenHotelWrapper, stayDate:
         imageUrl,
         altitude,
         bookingUrl: buildRakutenBookingUrl(basicInfo, stayDate),
+        latitude,
+        longitude,
     };
 }
 

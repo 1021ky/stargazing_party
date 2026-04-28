@@ -6,6 +6,7 @@ import {
     searchHotelsWithAvailability,
 } from "./rakuten_travel_hotel_search_api_client";
 import { getYahooReverseGeocodedAddress } from "./yahoo_reverse_geocoder_api_client";
+import { resolveLightPollution } from "./light_pollution_service";
 
 export interface StargazingSearchParams {
     date: string | Date;
@@ -50,10 +51,9 @@ export async function searchStargazingAccommodations({
     const isoDate = normaliseDate(date);
     const coords = resolveSearchCoordinates({ prefecture, bounds });
 
-    const [address, weather, hotels] = await Promise.all([
+    const [address, weather] = await Promise.all([
         getYahooReverseGeocodedAddress(coords.latitude, coords.longitude),
         getDailyWeatherSummary(coords.latitude, coords.longitude, isoDate),
-        searchHotelsWithAvailability(coords.latitude, coords.longitude, [isoDate]),
     ]);
 
     const weatherSummary = {
@@ -65,21 +65,27 @@ export async function searchStargazingAccommodations({
         timezone: weather.timezone,
     };
 
-    if (!weather.isClearSky) {
-        return {
-            accommodations: [],
-            resolvedAddress: address,
-            latitude: coords.latitude,
-            longitude: coords.longitude,
-            weather: weatherSummary,
-        };
-    }
+    const hotels = await searchHotelsWithFallback(
+        coords.latitude,
+        coords.longitude,
+        isoDate,
+    );
 
-    const filtered = applyFilters(hotels, filters)
-        .filter((hotel) => hotel.availableRooms > 0)
-        .map((hotel) => enrichHotelWithLocation(hotel, address));
+    const filtered = applyFilters(hotels, filters).filter(
+        (hotel) => hotel.availableRooms > 0,
+    );
 
-    const sorted = filtered.sort(
+    const enriched = await Promise.all(
+        filtered.map(async (hotel) => {
+            const pollution = await resolveLightPollution({
+                latitude: hotel.latitude ?? coords.latitude,
+                longitude: hotel.longitude ?? coords.longitude,
+            });
+            return enrichHotelWithLocation(hotel, address, pollution);
+        }),
+    );
+
+    const sorted = enriched.sort(
         (a, b) =>
             b.rating - a.rating || b.clearSkyProbability - a.clearSkyProbability,
     );
@@ -91,6 +97,22 @@ export async function searchStargazingAccommodations({
         longitude: coords.longitude,
         weather: weatherSummary,
     };
+}
+
+async function searchHotelsWithFallback(
+    latitude: number,
+    longitude: number,
+    isoDate: string,
+): Promise<RakutenHotelAccommodation[]> {
+    try {
+        return await searchHotelsWithAvailability(latitude, longitude, [isoDate]);
+    } catch (error) {
+        console.warn(
+            "Rakuten hotel search failed. Returning empty accommodations.",
+            error,
+        );
+        return [];
+    }
 }
 
 function resolveSearchCoordinates({
@@ -171,14 +193,24 @@ function toIsoDate(date: Date): string {
 function enrichHotelWithLocation(
     hotel: RakutenHotelAccommodation,
     resolvedAddress: string,
+    pollution: {
+        lightPollutionProxy: number | null;
+        lightPollutionLevel: Accommodation["lightPollutionLevel"];
+        lightPollutionSource: Accommodation["lightPollutionSource"];
+    },
 ): Accommodation {
+    const { latitude: _latitude, longitude: _longitude, ...baseHotel } = hotel;
+
     return {
-        ...hotel,
+        ...baseHotel,
         location: hotel.location || resolvedAddress,
         prefecture:
             hotel.prefecture ||
             extractPrefectureFromAddress(resolvedAddress) ||
             "不明",
+        lightPollutionProxy: pollution.lightPollutionProxy,
+        lightPollutionLevel: pollution.lightPollutionLevel,
+        lightPollutionSource: pollution.lightPollutionSource,
     };
 }
 

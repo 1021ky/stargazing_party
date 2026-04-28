@@ -15,7 +15,25 @@ describe("POST /api/search", () => {
 
     it("prefecture 指定で検索できる", async () => {
         searchStargazingAccommodationsMock.mockResolvedValue({
-            accommodations: [],
+            accommodations: [
+                {
+                    id: "hotel-1",
+                    name: "テストホテル",
+                    location: "千代田区",
+                    prefecture: "東京都",
+                    newMoonDate: "2026年4月8日",
+                    clearSkyProbability: 88,
+                    price: 18000,
+                    rating: 4.6,
+                    availableRooms: 2,
+                    imageUrl: "https://example.com/hotel.jpg",
+                    altitude: 45,
+                    bookingUrl: "https://example.com/booking",
+                    lightPollutionProxy: 22.5,
+                    lightPollutionLevel: "低",
+                    lightPollutionSource: "black-marble-vnp46a4",
+                },
+            ],
             resolvedAddress: "東京都千代田区",
             latitude: 35.68,
             longitude: 139.76,
@@ -42,6 +60,12 @@ describe("POST /api/search", () => {
         );
 
         expect(response.status).toBe(200);
+        const payload = await response.json();
+        expect(payload.accommodations[0]).toMatchObject({
+            lightPollutionProxy: 22.5,
+            lightPollutionLevel: "低",
+            lightPollutionSource: "black-marble-vnp46a4",
+        });
         expect(searchStargazingAccommodationsMock).toHaveBeenCalledWith({
             date: "2026-04-08",
             prefecture: "東京都",
@@ -209,6 +233,6 @@ describe("POST /api/search", () => {
 
         const payload = await response.json();
         expect(response.status).toBe(500);
-        expect(payload).toEqual({ message: "upstream timeout" });
+        expect(payload).toEqual({ message: "Internal server error" });
     });
 });

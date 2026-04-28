@@ -68,8 +68,13 @@ export async function POST(request: Request) {
             const status = error.message.startsWith("Unsupported prefecture")
                 ? 400
                 : 500;
-            return NextResponse.json({ message: error.message }, { status });
+            if (status === 500) {
+                console.error("[POST /api/search] Internal error:", error);
+            }
+            const message = status === 400 ? error.message : "Internal server error";
+            return NextResponse.json({ message }, { status });
         }
+        console.error("[POST /api/search] Unknown error:", error);
         return NextResponse.json(
             { message: "Unknown error occurred" },
             { status: 500 },

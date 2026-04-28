@@ -1,6 +1,11 @@
 import { Calendar, Cloud, MapPin, Star } from "lucide-react";
 
-export type LightPollutionLevel = "低" | "中" | "高";
+export type LightPollutionLevel = "低" | "中" | "高" | "不明";
+export type LightPollutionSource =
+    | "black-marble-vnp46a4"
+    | "black-marble-vnp46a4-gap-filled"
+    | "gibs-city-lights-2012"
+    | "fallback";
 
 export interface Accommodation {
     id: string;
@@ -15,21 +20,38 @@ export interface Accommodation {
     imageUrl: string;
     altitude: number;
     bookingUrl: string;
+    lightPollutionProxy: number | null;
+    lightPollutionLevel: LightPollutionLevel;
+    lightPollutionSource: LightPollutionSource;
 }
 
 interface AccommodationCardProps {
     accommodation: Accommodation;
 }
 
-// const lightPollutionStyles: Record<LightPollutionLevel, string> = {
-//     低: "bg-emerald-100 text-emerald-900",
-//     中: "bg-amber-100 text-amber-900",
-//     高: "bg-rose-100 text-rose-900",
-// };
+const lightPollutionStyles: Record<LightPollutionLevel, string> = {
+    低: "bg-emerald-100 text-emerald-900",
+    中: "bg-amber-100 text-amber-900",
+    高: "bg-rose-100 text-rose-900",
+    不明: "bg-slate-100 text-slate-700",
+};
 
 export function AccommodationCard({ accommodation }: AccommodationCardProps) {
-    // TODO 光害レベルに応じたバッジのスタイルを適用する
-    // const badgeClass = lightPollutionStyles[accommodation.lightPollution] ?? "bg-slate-100 text-slate-900";
+    const badgeClass =
+        lightPollutionStyles[accommodation.lightPollutionLevel] ??
+        "bg-slate-100 text-slate-900";
+    const pollutionValue =
+        typeof accommodation.lightPollutionProxy === "number"
+            ? accommodation.lightPollutionProxy.toFixed(1)
+            : "--";
+    const pollutionSourceLabel =
+        accommodation.lightPollutionSource === "black-marble-vnp46a4-gap-filled"
+            ? "(gap-filled)"
+            : accommodation.lightPollutionSource === "black-marble-vnp46a4"
+              ? "(direct)"
+              : accommodation.lightPollutionSource === "gibs-city-lights-2012"
+                ? "(satellite)"
+                : "(fallback)";
 
     return (
         <article className="overflow-hidden rounded-2xl border bg-white shadow-sm transition-shadow hover:shadow-lg">
@@ -63,6 +85,14 @@ export function AccommodationCard({ accommodation }: AccommodationCardProps) {
                     <div className="flex items-center gap-2">
                         <Cloud className="h-4 w-4" />
                         <span>晴天確率: {accommodation.clearSkyProbability}%</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${badgeClass}`}>
+                            光害: {accommodation.lightPollutionLevel}
+                        </span>
+                        <span className="text-xs text-slate-500">
+                            NTL {pollutionValue} {pollutionSourceLabel}
+                        </span>
                     </div>
                     <div>標高: {accommodation.altitude}m</div>
                 </dl>
