@@ -45,8 +45,8 @@ export function PrefectureMapCanvas({
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       <WMSTileLayer
-        url="https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi"
-        layers="VIIRS_CityLights_2012"
+        url="https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?TIME=2016-01-01"
+        layers="VIIRS_Black_Marble"
         format="image/jpeg"
         transparent={false}
         version="1.1.1"
