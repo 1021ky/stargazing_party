@@ -2,16 +2,7 @@ import { inflateSync } from "node:zlib";
 
 const GIBS_WMS_ENDPOINT =
   "https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi";
-const GIBS_LAYER = "VIIRS_SNPP_CityLights_Monthly";
-
-// Data availability lags ~2 months; use 2-month-prior month as TIME
-function getMostRecentAvailableMonth(): string {
-  const d = new Date();
-  d.setMonth(d.getMonth() - 2);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  return `${year}-${month}-01`;
-}
+const GIBS_LAYER = "VIIRS_CityLights_2012";
 
 // Brightness thresholds derived from VIIRS nighttime radiance range in the layer
 // Low: dark rural/mountain areas, Mid: small cities/suburbs, High: urban cores
@@ -38,7 +29,7 @@ export async function fetchGibsPixelBrightness(
   url.searchParams.set("STYLES", "");
   url.searchParams.set("FORMAT", "image/png");
   url.searchParams.set("TRANSPARENT", "false");
-  url.searchParams.set("TIME", getMostRecentAvailableMonth());
+  url.searchParams.set("TIME", "2012-01-01");
   url.searchParams.set("WIDTH", "1");
   url.searchParams.set("HEIGHT", "1");
   url.searchParams.set("SRS", "EPSG:4326");

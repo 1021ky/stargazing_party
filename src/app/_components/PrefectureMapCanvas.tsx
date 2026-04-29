@@ -26,14 +26,6 @@ interface PrefectureMapCanvasProps {
   onBoundsChange?: (bounds: MapSearchBounds) => void;
 }
 
-// Data availability lags ~2 months; use 2-month-prior month as TIME
-function getMostRecentGibsMonth(): string {
-  const d = new Date();
-  d.setMonth(d.getMonth() - 2);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
-}
-
-const gibsTime = getMostRecentGibsMonth();
 
 export function PrefectureMapCanvas({
   geojson,
@@ -53,8 +45,8 @@ export function PrefectureMapCanvas({
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       <WMSTileLayer
-        url={`https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?TIME=${gibsTime}`}
-        layers="VIIRS_SNPP_CityLights_Monthly"
+        url="https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi"
+        layers="VIIRS_CityLights_2012"
         format="image/jpeg"
         transparent={false}
         version="1.1.1"

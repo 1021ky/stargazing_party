@@ -4,7 +4,7 @@ export type LightPollutionLevel = "低" | "中" | "高" | "不明";
 export type LightPollutionSource =
     | "black-marble-vnp46a4"
     | "black-marble-vnp46a4-gap-filled"
-    | "gibs-city-lights-monthly"
+    | "gibs-city-lights-2012"
     | "fallback";
 
 export interface Accommodation {
@@ -48,10 +48,10 @@ export function AccommodationCard({ accommodation }: AccommodationCardProps) {
         accommodation.lightPollutionSource === "black-marble-vnp46a4-gap-filled"
             ? "(gap-filled)"
             : accommodation.lightPollutionSource === "black-marble-vnp46a4"
-              ? "(direct)"
-              : accommodation.lightPollutionSource === "gibs-city-lights-monthly"
-                ? "(satellite)"
-                : "(fallback)";
+                ? "(direct)"
+                : accommodation.lightPollutionSource === "gibs-city-lights-2012"
+                    ? "(satellite)"
+                    : "(fallback)";
 
     return (
         <article className="overflow-hidden rounded-2xl border bg-white shadow-sm transition-shadow hover:shadow-lg">

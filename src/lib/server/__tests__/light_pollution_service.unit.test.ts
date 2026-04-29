@@ -77,7 +77,7 @@ describe('resolveLightPollution', () => {
         });
     });
 
-    it('BLACK_MARBLE 例外発生時に GIBS が成功した場合は gibs-city-lights-monthly を返す', async () => {
+    it('BLACK_MARBLE 例外発生時に GIBS が成功した場合は gibs-city-lights-2012 を返す', async () => {
         getBlackMarbleProxy.mockRejectedValue(new Error('io failure'));
         fetchGibsPixelBrightness.mockResolvedValue(20); // low brightness
 
@@ -90,7 +90,7 @@ describe('resolveLightPollution', () => {
         expect(result).toEqual({
             lightPollutionProxy: 20,
             lightPollutionLevel: '低',
-            lightPollutionSource: 'gibs-city-lights-monthly',
+            lightPollutionSource: 'gibs-city-lights-2012',
         });
     });
 
@@ -110,7 +110,7 @@ describe('resolveLightPollution', () => {
         });
 
         expect(result.lightPollutionLevel).toBe(level);
-        expect(result.lightPollutionSource).toBe('gibs-city-lights-monthly');
+        expect(result.lightPollutionSource).toBe('gibs-city-lights-2012');
     });
 
     it('BLACK_MARBLE 例外 & GIBS が null を返した場合は fallback を返す', async () => {
