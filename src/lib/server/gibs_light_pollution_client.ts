@@ -1,8 +1,8 @@
 import { inflateSync } from "node:zlib";
 
 const GIBS_WMS_ENDPOINT =
-  "https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi";
-const GIBS_LAYER = "VIIRS_CityLights_2012";
+  "https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi";
+const GIBS_LAYER = "VIIRS_Black_Marble";
 
 // Brightness thresholds derived from VIIRS nighttime radiance range in the layer
 // Low: dark rural/mountain areas, Mid: small cities/suburbs, High: urban cores
@@ -29,7 +29,7 @@ export async function fetchGibsPixelBrightness(
   url.searchParams.set("STYLES", "");
   url.searchParams.set("FORMAT", "image/png");
   url.searchParams.set("TRANSPARENT", "false");
-  url.searchParams.set("TIME", "2012-01-01");
+  url.searchParams.set("TIME", "2016-01-01");
   url.searchParams.set("WIDTH", "1");
   url.searchParams.set("HEIGHT", "1");
   url.searchParams.set("SRS", "EPSG:4326");

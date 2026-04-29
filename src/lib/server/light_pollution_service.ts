@@ -9,7 +9,7 @@ export type LightPollutionLevel = "低" | "中" | "高" | "不明";
 export type LightPollutionSource =
     | "black-marble-vnp46a4"
     | "black-marble-vnp46a4-gap-filled"
-    | "gibs-city-lights-2012"
+    | "gibs-black-marble-2016"
     | "fallback";
 
 export interface ResolveLightPollutionParams {
@@ -61,7 +61,7 @@ export async function resolveLightPollution({
         return {
             lightPollutionProxy: brightness,
             lightPollutionLevel: classifyGibsBrightness(brightness),
-            lightPollutionSource: "gibs-city-lights-2012",
+            lightPollutionSource: "gibs-black-marble-2016",
         };
     } catch (error) {
         console.warn(

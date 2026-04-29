@@ -31,11 +31,38 @@ describe('AccommodationCard', () => {
                     lightPollutionLevel: '低',
                     lightPollutionSource: 'black-marble-vnp46a4',
                 }}
-            />, 
+            />,
         );
 
         expect(screen.getByText('光害: 低')).toBeInTheDocument();
         expect(screen.getByText('NTL 22.5 (direct)')).toBeInTheDocument();
+    });
+
+    it('gibs-black-marble-2016 の場合は (satellite) ラベルを表示する', () => {
+        render(
+            <AccommodationCard
+                accommodation={{
+                    id: 'hotel-3',
+                    name: 'テストホテル3',
+                    location: '長野県',
+                    prefecture: '長野県',
+                    newMoonDate: '2026年4月8日',
+                    clearSkyProbability: 90,
+                    price: 12000,
+                    rating: 4.5,
+                    availableRooms: 3,
+                    imageUrl: 'https://example.com/hotel3.jpg',
+                    altitude: 800,
+                    bookingUrl: 'https://example.com/booking3',
+                    lightPollutionProxy: 15.0,
+                    lightPollutionLevel: '低',
+                    lightPollutionSource: 'gibs-black-marble-2016',
+                }}
+            />,
+        );
+
+        expect(screen.getByText('光害: 低')).toBeInTheDocument();
+        expect(screen.getByText('NTL 15.0 (satellite)')).toBeInTheDocument();
     });
 
     it('fallback の場合は不明を表示する', () => {
@@ -58,7 +85,7 @@ describe('AccommodationCard', () => {
                     lightPollutionLevel: '不明',
                     lightPollutionSource: 'fallback',
                 }}
-            />, 
+            />,
         );
 
         expect(screen.getByText('光害: 不明')).toBeInTheDocument();
