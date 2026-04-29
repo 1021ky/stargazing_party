@@ -4,7 +4,7 @@ export type LightPollutionLevel = "低" | "中" | "高" | "不明";
 export type LightPollutionSource =
     | "black-marble-vnp46a4"
     | "black-marble-vnp46a4-gap-filled"
-    | "gibs-city-lights-2012"
+    | "gibs-city-lights-monthly"
     | "fallback";
 
 export interface Accommodation {
@@ -49,7 +49,7 @@ export function AccommodationCard({ accommodation }: AccommodationCardProps) {
             ? "(gap-filled)"
             : accommodation.lightPollutionSource === "black-marble-vnp46a4"
               ? "(direct)"
-              : accommodation.lightPollutionSource === "gibs-city-lights-2012"
+              : accommodation.lightPollutionSource === "gibs-city-lights-monthly"
                 ? "(satellite)"
                 : "(fallback)";
 
