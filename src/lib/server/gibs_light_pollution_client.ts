@@ -56,6 +56,11 @@ function extractPngPixelBrightness(buffer: Buffer): number | null {
     return null;
   }
 
+  // IHDR data starts at offset 16 (8 sig + 4 len + 4 type); bitDepth at 24, colorType at 25
+  if (buffer.length < 26) {
+    return null;
+  }
+
   // Read IHDR to get color type and bit depth
   // IHDR chunk starts at offset 8: 4(len) + 4(type) + 13(data) + 4(crc)
   const bitDepth = buffer.readUInt8(24);
@@ -98,6 +103,13 @@ function extractPngPixelBrightness(buffer: Buffer): number | null {
   // Each scanline: 1 filter byte + width * bytesPerPixel bytes
   // For a 1×1 image: raw = [filterByte, R, G, B, (A)]
   if (raw.length < 1 + bytesPerPixel) {
+    return null;
+  }
+
+  // Only handle Filter type 0 (None). Other filter types require row reconstruction
+  // which is unnecessary for 1×1 images and may yield incorrect RGB values.
+  const filterByte = raw.readUInt8(0);
+  if (filterByte !== 0) {
     return null;
   }
 

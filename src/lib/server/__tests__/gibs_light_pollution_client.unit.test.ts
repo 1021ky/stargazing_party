@@ -9,7 +9,7 @@ import {
 // Helper: build a minimal valid 1×1 RGB PNG buffer for a given pixel color.
 // CRCs are dummied (all zeros) since the parser does not validate them.
 // ---------------------------------------------------------------------------
-function buildTestPng(r: number, g: number, b: number): Buffer {
+function buildTestPng(r: number, g: number, b: number, filterByte = 0): Buffer {
     const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 
     // IHDR chunk
@@ -23,7 +23,7 @@ function buildTestPng(r: number, g: number, b: number): Buffer {
     const ihdrChunk = Buffer.concat([ihdrLen, Buffer.from('IHDR'), ihdrData, Buffer.alloc(4)]);
 
     // IDAT chunk: zlib-compress a scanline [filter=0, R, G, B]
-    const scanline = Buffer.from([0, r, g, b]);
+    const scanline = Buffer.from([filterByte, r, g, b]);
     const compressed = deflateSync(scanline);
     const idatLen = Buffer.alloc(4);
     idatLen.writeUInt32BE(compressed.length, 0);
@@ -110,6 +110,39 @@ describe('fetchGibsPixelBrightness', () => {
         jest.spyOn(global, 'fetch').mockRejectedValue(new Error('network error'));
 
         await expect(fetchGibsPixelBrightness(35.68, 139.76)).rejects.toThrow('network error');
+    });
+
+    it('PNG シグネチャ後のバッファが短すぎる場合は null を返す', async () => {
+        // PNG signature (8 bytes) + only 17 bytes — offset 24/25 (IHDR bit depth/color type) は範囲外
+        const shortBuffer = Buffer.concat([
+            Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+            Buffer.alloc(17),
+        ]);
+        jest.spyOn(global, 'fetch').mockResolvedValue(
+            new Response(shortBuffer, {
+                status: 200,
+                headers: { 'Content-Type': 'image/png' },
+            }),
+        );
+
+        const brightness = await fetchGibsPixelBrightness(35.68, 139.76);
+
+        expect(brightness).toBeNull();
+    });
+
+    it('filter byte が 0 以外の場合は null を返す', async () => {
+        // filterByte = 1 (Sub filter) — Raw バイトをそのまま RGB として読むと誤値になる
+        const pngWithSubFilter = buildTestPng(100, 100, 100, 1);
+        jest.spyOn(global, 'fetch').mockResolvedValue(
+            new Response(pngWithSubFilter, {
+                status: 200,
+                headers: { 'Content-Type': 'image/png' },
+            }),
+        );
+
+        const brightness = await fetchGibsPixelBrightness(35.68, 139.76);
+
+        expect(brightness).toBeNull();
     });
 });
 

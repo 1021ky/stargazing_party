@@ -33,7 +33,7 @@ Stargazing Party は、星空観察に適した日付と周辺の宿泊施設を
 - 都道府県のセレクトボックスは廃止
 - 都道府県選択は地図クリック（PrefectureMapPicker）で行う
 - 日付選択は既存の晴天候補ロジックを利用
-- 価格・評価フィルタUIは存在するが、現時点では検索条件に未反映
+- 価格・評価フィルタUI（maxPrice / minRating）は検索条件に反映されサーバー側でフィルタ適用
 
 ### 右ペイン（検索結果）
 
@@ -45,13 +45,13 @@ Stargazing Party は、星空観察に適した日付と周辺の宿泊施設を
 
 ### API 契約
 
-- 今回は UI 先行のため検索 API 契約は変更しない
-- 現行の検索呼び出し（`date`, `prefecture`）を維持
+- 検索 API（`/api/search`）は `date`, `prefecture`, `bounds`, `filters` を受け付ける
+- `bounds` はマップビューポートの bounding box（minLatitude / maxLatitude / minLongitude / maxLongitude）
+- `filters` は `maxPrice`（上限価格）と `minRating`（下限評価）のオプショナルなフィルタ条件
+- `prefecture` と `bounds` はいずれか一方を指定する（両方省略は不可）
 
 ## 非スコープ
 
-- Bounds を使った検索 API 契約への変更
-- 価格・評価フィルタの実検索反映
 - 住所入力起点の検索導線追加
 - 結果カードの3列化
 
@@ -75,7 +75,5 @@ Stargazing Party は、星空観察に適した日付と周辺の宿泊施設を
 
 ## 将来バックログ
 
-- Bounds 連携による検索 API 拡張
-- 価格・評価フィルタの実検索適用
 - 住所入力からの検索導線追加
 - 手動検証項目の強化（12-13インチ解像度での見え方確認を定常化）

@@ -51,9 +51,10 @@ export async function searchStargazingAccommodations({
     const isoDate = normaliseDate(date);
     const coords = resolveSearchCoordinates({ prefecture, bounds });
 
-    const [address, weather] = await Promise.all([
+    const [address, weather, hotels] = await Promise.all([
         getYahooReverseGeocodedAddress(coords.latitude, coords.longitude),
         getDailyWeatherSummary(coords.latitude, coords.longitude, isoDate),
+        searchHotelsWithFallback(coords.latitude, coords.longitude, isoDate),
     ]);
 
     const weatherSummary = {
@@ -64,12 +65,6 @@ export async function searchStargazingAccommodations({
         temperatureMin: weather.temperatureMin,
         timezone: weather.timezone,
     };
-
-    const hotels = await searchHotelsWithFallback(
-        coords.latitude,
-        coords.longitude,
-        isoDate,
-    );
 
     const filtered = applyFilters(hotels, filters).filter(
         (hotel) => hotel.availableRooms > 0,
