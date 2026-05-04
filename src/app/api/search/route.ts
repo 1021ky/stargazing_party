@@ -13,20 +13,13 @@ interface SearchFilters {
     minRating?: number;
 }
 
-interface SearchRequestBody {
-    date: string;
-    prefecture?: string;
-    bounds?: SearchBounds;
-    filters?: SearchFilters;
-}
-
-export async function POST(request: Request) {
+export async function GET(request: Request) {
     try {
-        const body = (await request.json()) as Partial<SearchRequestBody>;
-        const date = body?.date;
-        const prefecture = body?.prefecture;
-        const bounds = body?.bounds;
-        const filters = body?.filters;
+        const { searchParams } = new URL(request.url);
+        const date = searchParams.get("date") ?? undefined;
+        const prefecture = searchParams.get("prefecture") ?? undefined;
+        const bounds = parseJsonParam("bounds", searchParams.get("bounds"));
+        const filters = parseJsonParam("filters", searchParams.get("filters"));
 
         if (!date) {
             return NextResponse.json(
@@ -69,12 +62,12 @@ export async function POST(request: Request) {
                 ? 400
                 : 500;
             if (status === 500) {
-                console.error("[POST /api/search] Internal error:", error);
+                console.error("[GET /api/search] Internal error:", error);
             }
             const message = status === 400 ? error.message : "Internal server error";
             return NextResponse.json({ message }, { status });
         }
-        console.error("[POST /api/search] Unknown error:", error);
+        console.error("[GET /api/search] Unknown error:", error);
         return NextResponse.json(
             { message: "Unknown error occurred" },
             { status: 500 },
@@ -179,4 +172,15 @@ function validateFiniteNumber(value: unknown, label: string): number {
         throw new TypeError(`${label} must be a finite number`);
     }
     return value;
+}
+
+function parseJsonParam(name: string, value: string | null): unknown {
+    if (value === null) {
+        return undefined;
+    }
+    try {
+        return JSON.parse(value);
+    } catch {
+        throw new TypeError(`${name} must be valid JSON`);
+    }
 }
