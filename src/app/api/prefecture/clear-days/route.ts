@@ -93,7 +93,7 @@ export async function GET(request: Request) {
         prefecture,
         startDate: null,
         endDate: null,
-        days: [] as ClearDaysResponseDay[],
+        days: [],
         availability: "out_of_supported_range",
         message: "現在の提供期間外のため晴れ予報を表示できません。",
       });
@@ -125,7 +125,7 @@ export async function GET(request: Request) {
         prefecture,
         startDate: null,
         endDate: null,
-        days: [] as ClearDaysResponseDay[],
+        days: [],
         availability: "out_of_supported_range",
         message: "現在の提供期間外のため晴れ予報を表示できません。",
       });
