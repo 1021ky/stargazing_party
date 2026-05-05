@@ -155,11 +155,7 @@ export function SearchForm({ onSearch }: SearchFormProps) {
 
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
-          const message =
-            typeof payload?.message === "string"
-              ? payload.message
-              : "晴れ予報の取得に失敗しました";
-          throw new Error(message);
+          throw new Error("晴れ予報の取得に失敗しました");
         }
 
         const rawDays: unknown[] = Array.isArray(payload?.days)
@@ -220,7 +216,7 @@ export function SearchForm({ onSearch }: SearchFormProps) {
           error instanceof Error
             ? error.message
             : "晴れ予報の取得に失敗しました";
-        setWeatherError(`晴れ予報の取得に失敗しました: ${message}`);
+        setWeatherError(message);
         setWeatherNotice(null);
         setWeatherWindow([]);
       } finally {

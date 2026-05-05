@@ -87,35 +87,24 @@ export default function Home() {
       return;
     }
 
-    const requestBody: {
-      date: string;
-      prefecture?: string;
-      bounds?: MapSearchBounds;
-      filters?: SearchFilters;
-    } = {
-      date: dateIso,
-    };
+    const requestParams = new URLSearchParams({ date: dateIso });
 
     if (options.bounds) {
-      requestBody.bounds = options.bounds;
+      requestParams.set("bounds", JSON.stringify(options.bounds));
     } else {
-      requestBody.prefecture = prefecture;
+      requestParams.set("prefecture", prefecture);
     }
 
     if (options.filters) {
-      requestBody.filters = options.filters;
+      requestParams.set("filters", JSON.stringify(options.filters));
     }
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
     try {
-      const response = await fetch("/api/search", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestBody),
+      const response = await fetch(`/api/search?${requestParams.toString()}`, {
+        method: "GET",
         signal: controller.signal,
       });
 
