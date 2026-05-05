@@ -50,10 +50,12 @@ function buildTestPng(r: number, g: number, b: number, filterByte = 0): Buffer {
 }
 
 describe("fetchGibsPixelBrightness", () => {
-  const originalFetch = global.fetch;
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
 
   afterEach(() => {
-    global.fetch = originalFetch;
+    jest.restoreAllMocks();
   });
 
   it.each([

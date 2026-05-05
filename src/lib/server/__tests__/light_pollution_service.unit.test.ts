@@ -74,6 +74,7 @@ describe("resolveLightPollution", () => {
       qualityFlag: 255,
       isNoData: true,
     });
+    fetchGibsPixelBrightness.mockResolvedValue(null);
 
     const result = await resolveLightPollution({
       latitude: 35.68,

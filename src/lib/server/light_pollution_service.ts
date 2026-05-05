@@ -1,3 +1,7 @@
+import {
+  formatLightPollutionDataLabel,
+  resolveLightPollutionBaseYear,
+} from "@/lib/light_pollution_baseline";
 import { getBlackMarbleProxy } from "./black_marble_api_client";
 import {
   fetchGibsPixelBrightness,
@@ -5,10 +9,6 @@ import {
   GIBS_BRIGHTNESS_LOW_THRESHOLD,
   resolveGibsWmsTime,
 } from "./gibs_light_pollution_client";
-import {
-  formatLightPollutionDataLabel,
-  resolveLightPollutionBaseYear,
-} from "@/lib/light_pollution_baseline";
 
 export type LightPollutionLevel = "低" | "中" | "高" | "不明";
 export type LightPollutionSource =
@@ -39,11 +39,8 @@ export async function resolveLightPollution({
 }: ResolveLightPollutionParams): Promise<LightPollutionResult> {
   const targetYear = resolveLightPollutionBaseYear(year);
   const annualDataLabel = formatLightPollutionDataLabel(`${targetYear}-01-01`);
-  const label = `[DEBUG:LightPollution] lat=${latitude.toFixed(4)} lon=${longitude.toFixed(4)} year=${targetYear}`;
-  console.log(`${label} - Starting...`);
 
   try {
-    console.log(`${label} - Trying Black Marble...`);
     const { proxyRaw, qualityFlag, isNoData } = await getBlackMarbleProxy({
       latitude,
       longitude,
@@ -51,16 +48,10 @@ export async function resolveLightPollution({
     });
 
     if (isNoData || proxyRaw === null) {
-      console.log(
-        `${label} - Black Marble: isNoData=${isNoData}, proxyRaw=${proxyRaw} → GIBS fallback`,
-      );
       // Fall through to GIBS
     } else {
       const level = classifyLightPollutionLevel(proxyRaw);
       const source = resolveSourceFromQuality(qualityFlag);
-      console.log(
-        `${label} - Black Marble SUCCESS: proxy=${proxyRaw} level=${level} source=${source}`,
-      );
       return {
         lightPollutionProxy: proxyRaw,
         lightPollutionLevel: level,
@@ -68,13 +59,11 @@ export async function resolveLightPollution({
         lightPollutionDataLabel: annualDataLabel,
       };
     }
-  } catch (err) {
-    console.log(`${label} - Black Marble FAILED: ${(err as Error).message}`);
+  } catch (_err) {
     // Fall through to GIBS
   }
 
   try {
-    console.log(`${label} - Trying GIBS...`);
     const gibsTime = resolveGibsWmsTime(targetYear, month);
     const brightness = await fetchGibsPixelBrightness(
       latitude,
@@ -83,22 +72,16 @@ export async function resolveLightPollution({
       month,
     );
     if (brightness === null) {
-      console.log(`${label} - GIBS: brightness=null → using fallback`);
       return fallbackResult(annualDataLabel);
     }
     const level = classifyGibsBrightness(brightness);
-    console.log(
-      `${label} - GIBS SUCCESS: brightness=${brightness} level=${level}`,
-    );
     return {
       lightPollutionProxy: brightness,
       lightPollutionLevel: level,
       lightPollutionSource: "gibs-black-marble",
       lightPollutionDataLabel: formatLightPollutionDataLabel(gibsTime),
     };
-  } catch (error) {
-    console.log(`${label} - GIBS FAILED: ${(error as Error).message}`);
-    console.log(`${label} - Using fallback...`);
+  } catch (_error) {
     return fallbackResult(annualDataLabel);
   }
 }

@@ -1,7 +1,6 @@
 import { inflateSync } from "node:zlib";
 import { resolveLightPollutionBaseDate } from "@/lib/light_pollution_baseline";
 
-
 const GIBS_WMS_ENDPOINT =
   "https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi";
 const GIBS_LAYER = "VIIRS_Black_Marble";
@@ -11,7 +10,10 @@ const GIBS_LAYER = "VIIRS_Black_Marble";
 export const GIBS_BRIGHTNESS_LOW_THRESHOLD = 30;
 export const GIBS_BRIGHTNESS_HIGH_THRESHOLD = 80;
 
-export function resolveGibsWmsTime(baseYear?: number, baseMonth?: number): string {
+export function resolveGibsWmsTime(
+  baseYear?: number,
+  baseMonth?: number,
+): string {
   return resolveLightPollutionBaseDate(baseYear, baseMonth);
 }
 
@@ -28,8 +30,6 @@ export async function fetchGibsPixelBrightness(
 ): Promise<number | null> {
   const delta = 0.01;
   const bbox = `${longitude - delta},${latitude - delta},${longitude + delta},${latitude + delta}`;
-  const label = `[DEBUG:GIBS] lat=${latitude.toFixed(4)} lon=${longitude.toFixed(4)}`;
-  console.log(`${label} - bbox=${bbox}`);
 
   const gibsTime = resolveGibsWmsTime(baseYear, baseMonth);
   const url = new URL(GIBS_WMS_ENDPOINT);
@@ -46,17 +46,13 @@ export async function fetchGibsPixelBrightness(
   url.searchParams.set("SRS", "EPSG:4326");
   url.searchParams.set("BBOX", bbox);
 
-  console.log(`${label} - Request URL: ${url.toString()}`);
   const response = await fetch(url.toString(), { method: "GET" });
   if (!response.ok) {
-    console.log(`${label} - HTTP error: ${response.status}`);
     throw new Error(`GIBS WMS request failed with status ${response.status}`);
   }
 
   const buffer = Buffer.from(await response.arrayBuffer());
-  const brightness = extractPngPixelBrightness(buffer);
-  console.log(`${label} - Extracted brightness: ${brightness}`);
-  return brightness;
+  return extractPngPixelBrightness(buffer);
 }
 
 /**
