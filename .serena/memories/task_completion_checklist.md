@@ -1,0 +1,3 @@
+- Run relevant checks before finishing: at least pnpm lint and pnpm test; include pnpm build for runtime/route-impacting changes.
+- Ensure tests updated at proper level (unit/integration) for behavior changes.
+- Remove temporary debug logs and avoid leaking secrets in logs/code.

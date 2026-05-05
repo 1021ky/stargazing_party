@@ -1,0 +1,5 @@
+- Keep route handlers thin: validate input, delegate orchestration to src/lib/server, map errors to HTTP status.
+- External API parsing/normalization stays in dedicated client modules under src/lib/server.
+- Prefer @/ alias imports.
+- Naming: React components PascalCase, server modules snake_case.
+- Keep changes minimal and consistent with existing style; Biome is formatting/lint authority.
