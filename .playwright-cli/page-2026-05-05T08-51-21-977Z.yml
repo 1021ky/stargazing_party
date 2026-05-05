@@ -1,0 +1,57 @@
+- generic [active] [ref=e1]:
+  - main [ref=e3]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e45]:
+          - generic:
+            - generic:
+              - img
+          - generic:
+            - generic [ref=e93]:
+              - button "Zoom in" [ref=e94] [cursor=pointer]: +
+              - button "Zoom out" [ref=e95] [cursor=pointer]: −
+            - generic [ref=e96]:
+              - link "Leaflet" [ref=e97] [cursor=pointer]:
+                - /url: https://leafletjs.com
+                - img [ref=e98]
+                - text: Leaflet
+              - text: "| ©"
+              - link "OpenStreetMap" [ref=e102] [cursor=pointer]:
+                - /url: https://www.openstreetmap.org/copyright
+              - text: "contributors, Nighttime imagery:"
+              - link "NASA ESDIS GIBS" [ref=e103] [cursor=pointer]:
+                - /url: https://earthdata.nasa.gov/gibs
+        - paragraph [ref=e8]: "選択中: 長野県"
+      - generic [ref=e9]:
+        - heading "星空宿泊マップ検索" [level=1] [ref=e10]
+        - paragraph [ref=e11]: 地図をクリックして検索エリアを選び、表示エリアに合わせた日付と条件で宿を探します。
+        - generic [ref=e12]:
+          - generic [ref=e13]:
+            - generic [ref=e14]: 日付
+            - textbox "日付 晴れの日だけ選択できます。" [ref=e198] [cursor=pointer]:
+              - /placeholder: 晴れの日を選択してください
+              - text: 2026年5月19日
+            - paragraph [ref=e17]: 晴れの日だけ選択できます。
+          - generic [ref=e18]:
+            - generic [ref=e19]:
+              - generic [ref=e20]: 価格
+              - combobox "価格" [ref=e21]:
+                - option "指定なし" [selected]
+                - option "¥10,000以下"
+                - option "¥20,000以下"
+                - option "¥30,000以下"
+            - generic [ref=e22]:
+              - generic [ref=e23]: 評価
+              - combobox "評価" [ref=e24]:
+                - option "指定なし" [selected]
+                - option "4.5以上"
+                - option "4.0以上"
+                - option "3.5以上"
+          - button "表示エリアで宿を検索" [ref=e25]
+    - generic [ref=e29]:
+      - img [ref=e30]
+      - heading "星空観察に適した宿を検索してください" [level=3] [ref=e33]
+      - paragraph [ref=e34]: 地図の表示エリアと日付を指定して、星空を楽しめる宿泊施設を見つけましょう。
+  - button "Open Next.js Dev Tools" [ref=e40] [cursor=pointer]:
+    - img [ref=e41]
+  - alert [ref=e44]
