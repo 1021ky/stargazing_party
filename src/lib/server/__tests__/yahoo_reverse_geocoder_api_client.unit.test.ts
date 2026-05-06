@@ -43,15 +43,22 @@ describe("getYahooReverseGeocodedAddress (unit)", () => {
   });
 
   it("APIが非200を返し続ける場合は再試行し最終的に例外を投げる", async () => {
+    jest.useFakeTimers();
+
     const fetchMock = jest
       .spyOn(global, "fetch")
       .mockResolvedValue(
         new Response("<ResultSet></ResultSet>", { status: 500 }),
       );
 
-    await expect(
-      getYahooReverseGeocodedAddress(latitude, longitude),
-    ).rejects.toThrow("Unexpected status code: 500");
+    const promise = getYahooReverseGeocodedAddress(latitude, longitude);
+    const rejection = expect(promise).rejects.toThrow(
+      "Unexpected status code: 500",
+    );
+    // バックオフ遅延を進める: 1回目リトライ前 1s、2回目リトライ前 2s
+    await jest.advanceTimersByTimeAsync(1_000);
+    await jest.advanceTimersByTimeAsync(2_000);
+    await rejection;
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 

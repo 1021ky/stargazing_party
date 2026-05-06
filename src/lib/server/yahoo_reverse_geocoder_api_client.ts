@@ -3,6 +3,7 @@ import { XMLParser } from "fast-xml-parser";
 const BASE_URL = "https://map.yahooapis.jp/geoapi/V1/reverseGeoCoder";
 const REQUEST_TIMEOUT_MS = 5_000;
 const MAX_RETRIES = 3;
+const INITIAL_RETRY_DELAY_MS = 1_000;
 
 /**
  * 緯度経度から住所を取得する
@@ -60,6 +61,10 @@ type Fetcher = (
   init?: RequestInit,
 ) => Promise<Response>;
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function createFetchClient(): Fetcher {
   return async (input, init = {}) => {
     let attempt = 0;
@@ -92,6 +97,9 @@ function createFetchClient(): Fetcher {
 
       if (result.success) {
         return result.response;
+      }
+      if (attempt + 1 < MAX_RETRIES) {
+        await sleep(INITIAL_RETRY_DELAY_MS * 2 ** attempt);
       }
       attempt += 1;
     }
