@@ -9,7 +9,7 @@ import {
   useMap,
   WMSTileLayer,
 } from "react-leaflet";
-import { resolveLightPollutionBaseDate } from "@/lib/light_pollution_baseline";
+import { resolveGibsLightPollutionDate } from "@/lib/light_pollution_baseline";
 
 export interface MapSearchBounds {
   minLatitude: number;
@@ -38,7 +38,7 @@ export function PrefectureMapCanvas({
   onPick,
   onBoundsChange,
 }: PrefectureMapCanvasProps) {
-  const lightPollutionTime = resolveLightPollutionBaseDate();
+  const lightPollutionTime = resolveGibsLightPollutionDate();
 
   return (
     <MapContainer

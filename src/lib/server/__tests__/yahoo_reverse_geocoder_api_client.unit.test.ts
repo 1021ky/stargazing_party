@@ -2,13 +2,13 @@ import { getYahooReverseGeocodedAddress } from "../yahoo_reverse_geocoder_api_cl
 
 describe("getYahooReverseGeocodedAddress (unit)", () => {
   const originalFetch = global.fetch;
-  const originalAppId = process.env.YAHOO_APP_ID;
+  const originalAppId = process.env.YAHOO_APP_CLIENT_ID;
   const latitude = 35.0;
   const longitude = 139.0;
 
   beforeEach(() => {
     jest.useRealTimers();
-    process.env.YAHOO_APP_ID = "test-app-id";
+    process.env.YAHOO_APP_CLIENT_ID = "test-app-id";
   });
 
   afterEach(() => {
@@ -18,7 +18,7 @@ describe("getYahooReverseGeocodedAddress (unit)", () => {
 
   afterAll(() => {
     global.fetch = originalFetch;
-    process.env.YAHOO_APP_ID = originalAppId;
+    process.env.YAHOO_APP_CLIENT_ID = originalAppId;
   });
 
   it("APIが200を返した場合に住所を返す", async () => {
