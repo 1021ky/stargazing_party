@@ -2,6 +2,13 @@ const BASE_URL =
   "https://app.rakuten.co.jp/services/api/Travel/SimpleHotelSearch/20170426";
 const REQUEST_TIMEOUT_MS = 5_000;
 const MAX_RETRIES = 3;
+
+export class RakutenHotelNotFoundError extends Error {
+  constructor() {
+    super("周辺の地域でホテルは見つかりませんでした");
+    this.name = "RakutenHotelNotFoundError";
+  }
+}
 const SEARCH_RADIUS_KM = 3;
 const SYNODIC_MONTH_DAYS = 29.530588853;
 
@@ -161,6 +168,10 @@ function createFetchClient(): Fetcher {
           if (response.status === 200) {
             return { success: true as const, response };
           }
+          if (response.status === 404) {
+            lastError = new RakutenHotelNotFoundError();
+            return { success: false as const, abort: true };
+          }
           if (response.status === 400) {
             try {
               const bodyText = await response.clone().text();
@@ -190,6 +201,9 @@ function createFetchClient(): Fetcher {
 
       if (result.success) {
         return result.response;
+      }
+      if ("abort" in result && result.abort) {
+        break;
       }
       attempt += 1;
     }

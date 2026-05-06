@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Accommodation } from "./_components/AccommodationCard";
 import type { MapSearchBounds } from "./_components/PrefectureMapCanvas";
 import { SearchForm } from "./_components/SearchForm";
 import { SearchResults } from "./_components/SearchResults";
+import { Toast } from "./_components/Toast";
 
 type SearchFilters = {
   maxPrice?: number;
@@ -39,7 +40,10 @@ export default function Home() {
     null,
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  const dismissToast = useCallback(() => setToastMessage(null), []);
 
   useEffect(() => {
     return () => {
@@ -65,6 +69,7 @@ export default function Home() {
 
     setIsLoading(true);
     setErrorMessage(null);
+    setToastMessage(null);
     setAccommodations([]);
     setSearchMetadata(null);
     setSearchParams({
@@ -139,6 +144,13 @@ export default function Home() {
           : null;
       setAccommodations(hotels);
       setSearchMetadata({ resolvedAddress, weather });
+      const warning =
+        typeof data?.hotelSearchWarning === "string"
+          ? data.hotelSearchWarning
+          : null;
+      if (warning) {
+        setToastMessage(warning);
+      }
     } catch (error) {
       if (controller.signal.aborted) {
         return;
@@ -174,6 +186,9 @@ export default function Home() {
           />
         </div>
       </main>
+      {toastMessage && (
+        <Toast message={toastMessage} onDismiss={dismissToast} />
+      )}
     </div>
   );
 }
