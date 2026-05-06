@@ -1,5 +1,6 @@
 import {
   formatLightPollutionDataLabel,
+  resolveGibsLightPollutionDate,
   resolveLightPollutionBaseDate,
   resolveLightPollutionBaseMonth,
   resolveLightPollutionBaseYear,
@@ -79,7 +80,6 @@ describe("resolveLightPollutionBaseDate", () => {
     delete process.env.LIGHT_POLLUTION_BASE_YEAR;
     delete process.env.LIGHT_POLLUTION_BASE_MONTH;
     delete process.env.LIGHT_POLLUTION_BASE_DATE;
-    delete process.env.GIBS_WMS_TIME;
   });
 
   it.each([
@@ -100,14 +100,30 @@ describe("resolveLightPollutionBaseDate", () => {
     expect(resolveLightPollutionBaseDate(2024, 3)).toBe("2021-06-01");
   });
 
-  it("環境変数 GIBS_WMS_TIME が設定されている場合はそれを優先する", () => {
-    process.env.GIBS_WMS_TIME = "2019-09-01";
-    expect(resolveLightPollutionBaseDate(2024, 3)).toBe("2019-09-01");
-  });
-
   it("環境変数 LIGHT_POLLUTION_BASE_MONTH と組み合わせて動作する", () => {
     process.env.LIGHT_POLLUTION_BASE_MONTH = "7";
     expect(resolveLightPollutionBaseDate(2024)).toBe("2024-07-01");
+  });
+});
+
+describe("resolveGibsLightPollutionDate", () => {
+  afterEach(() => {
+    delete process.env.GIBS_WMS_TIME;
+  });
+
+  it.each([
+    { input: undefined, expected: "2016-01-01" },
+    { input: 2024, expected: "2016-01-01" },
+    { input: 2016, expected: "2016-01-01" },
+    { input: 2014, expected: "2012-01-01" },
+    { input: 2011, expected: "2012-01-01" },
+  ])("year=$input → $expected", ({ input, expected }) => {
+    expect(resolveGibsLightPollutionDate(input)).toBe(expected);
+  });
+
+  it("環境変数 GIBS_WMS_TIME が設定されている場合はそれを優先する", () => {
+    process.env.GIBS_WMS_TIME = "2019-09-01";
+    expect(resolveGibsLightPollutionDate(2024)).toBe("2019-09-01");
   });
 });
 

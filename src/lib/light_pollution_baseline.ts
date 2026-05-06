@@ -3,6 +3,8 @@ const MONTH_PATTERN = /^(1[0-2]|[1-9])$/;
 const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 const STABLE_YEAR_LAG = 1;
+const GIBS_LIGHT_POLLUTION_EARLIEST_YEAR = 2012;
+const GIBS_LIGHT_POLLUTION_LATEST_YEAR = 2016;
 
 export function resolveLightPollutionBaseYear(explicitYear?: number): number {
   if (typeof explicitYear === "number" && Number.isFinite(explicitYear)) {
@@ -12,7 +14,6 @@ export function resolveLightPollutionBaseYear(explicitYear?: number): number {
   const fromEnv = [
     process.env.LIGHT_POLLUTION_BASE_YEAR,
     process.env.NEXT_PUBLIC_LIGHT_POLLUTION_BASE_YEAR,
-    process.env.BLACK_MARBLE_DATASET_YEAR,
   ]
     .map((value) => parseYear(value))
     .find((value) => value !== null);
@@ -49,7 +50,6 @@ export function resolveLightPollutionBaseDate(
   const fromEnv = [
     process.env.LIGHT_POLLUTION_BASE_DATE,
     process.env.NEXT_PUBLIC_LIGHT_POLLUTION_BASE_DATE,
-    process.env.GIBS_WMS_TIME,
   ]
     .map((value) => parseDate(value))
     .find((value) => value !== null);
@@ -61,6 +61,16 @@ export function resolveLightPollutionBaseDate(
   const year = resolveLightPollutionBaseYear(baseYear);
   const month = resolveLightPollutionBaseMonth(baseMonth);
   return `${year}-${String(month).padStart(2, "0")}-01`;
+}
+
+export function resolveGibsLightPollutionDate(explicitYear?: number): string {
+  const fromEnv = parseDate(process.env.GIBS_WMS_TIME);
+  if (fromEnv) {
+    return fromEnv;
+  }
+
+  const year = resolveGibsLightPollutionYear(explicitYear);
+  return `${year}-01-01`;
 }
 
 export function formatLightPollutionDataLabel(date: string): string {
@@ -86,6 +96,16 @@ export function formatLightPollutionDataLabel(date: string): string {
 
 function latestStableYear(now: Date = new Date()): number {
   return now.getUTCFullYear() - STABLE_YEAR_LAG;
+}
+
+function resolveGibsLightPollutionYear(explicitYear?: number): number {
+  const requestedYear = resolveLightPollutionBaseYear(explicitYear);
+
+  if (requestedYear >= GIBS_LIGHT_POLLUTION_LATEST_YEAR) {
+    return GIBS_LIGHT_POLLUTION_LATEST_YEAR;
+  }
+
+  return GIBS_LIGHT_POLLUTION_EARLIEST_YEAR;
 }
 
 function parseYear(value: string | undefined): number | null {

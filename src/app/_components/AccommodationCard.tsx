@@ -1,11 +1,8 @@
 import { Calendar, Cloud, MapPin, Star } from "lucide-react";
+import Image from "next/image";
 
 export type LightPollutionLevel = "低" | "中" | "高" | "不明";
-export type LightPollutionSource =
-  | "black-marble-vnp46a4"
-  | "black-marble-vnp46a4-gap-filled"
-  | "gibs-black-marble"
-  | "fallback";
+export type LightPollutionSource = "gibs-black-marble" | "fallback";
 
 export interface Accommodation {
   id: string;
@@ -46,22 +43,21 @@ export function AccommodationCard({ accommodation }: AccommodationCardProps) {
       ? accommodation.lightPollutionProxy.toFixed(1)
       : "--";
   const pollutionSourceLabel =
-    accommodation.lightPollutionSource === "black-marble-vnp46a4-gap-filled"
-      ? "(gap-filled)"
-      : accommodation.lightPollutionSource === "black-marble-vnp46a4"
-        ? "(direct)"
-        : accommodation.lightPollutionSource === "gibs-black-marble"
-          ? "(satellite)"
-          : "(fallback)";
+    accommodation.lightPollutionSource === "gibs-black-marble"
+      ? "(satellite)"
+      : "(fallback)";
 
   return (
     <article className="overflow-hidden rounded-2xl border bg-white shadow-sm transition-shadow hover:shadow-lg">
       <div className="relative aspect-video bg-slate-200">
-        <img
+        <Image
           src={accommodation.imageUrl}
           alt={accommodation.name}
-          className="h-full w-full object-cover"
-          loading="lazy"
+          fill
+          sizes="(min-width: 1024px) 50vw, 100vw"
+          className="object-cover"
+          loader={({ src }) => src}
+          unoptimized
         />
       </div>
 

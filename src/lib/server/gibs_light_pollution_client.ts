@@ -1,9 +1,10 @@
 import { inflateSync } from "node:zlib";
-import { resolveLightPollutionBaseDate } from "@/lib/light_pollution_baseline";
+import { resolveGibsLightPollutionDate } from "@/lib/light_pollution_baseline";
 
 const GIBS_WMS_ENDPOINT =
   "https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi";
 const GIBS_LAYER = "VIIRS_Black_Marble";
+const GIBS_SAMPLE_SIZE = 3;
 
 // Brightness thresholds derived from VIIRS nighttime radiance range in the layer
 // Low: dark rural/mountain areas, Mid: small cities/suburbs, High: urban cores
@@ -12,14 +13,14 @@ export const GIBS_BRIGHTNESS_HIGH_THRESHOLD = 80;
 
 export function resolveGibsWmsTime(
   baseYear?: number,
-  baseMonth?: number,
+  _baseMonth?: number,
 ): string {
-  return resolveLightPollutionBaseDate(baseYear, baseMonth);
+  return resolveGibsLightPollutionDate(baseYear);
 }
 
 /**
- * Fetches a 1×1 pixel PNG from the GIBS WMS endpoint for the given coordinates
- * and returns the average RGB brightness (0–255).
+ * Fetches a small PNG from the GIBS WMS endpoint for the given coordinates
+ * and returns the average RGB brightness (0–255) across the image.
  * Returns null if the request fails or the PNG cannot be parsed.
  */
 export async function fetchGibsPixelBrightness(
@@ -41,8 +42,8 @@ export async function fetchGibsPixelBrightness(
   url.searchParams.set("FORMAT", "image/png");
   url.searchParams.set("TRANSPARENT", "false");
   url.searchParams.set("TIME", gibsTime);
-  url.searchParams.set("WIDTH", "1");
-  url.searchParams.set("HEIGHT", "1");
+  url.searchParams.set("WIDTH", String(GIBS_SAMPLE_SIZE));
+  url.searchParams.set("HEIGHT", String(GIBS_SAMPLE_SIZE));
   url.searchParams.set("SRS", "EPSG:4326");
   url.searchParams.set("BBOX", bbox);
 
@@ -52,28 +53,28 @@ export async function fetchGibsPixelBrightness(
   }
 
   const buffer = Buffer.from(await response.arrayBuffer());
-  return extractPngPixelBrightness(buffer);
+  return extractPngAverageBrightness(buffer);
 }
 
 /**
- * Parses a minimal PNG buffer and returns the average RGB brightness of the first pixel.
+ * Parses a PNG buffer and returns the average RGB brightness across all pixels.
  * PNG structure: 8-byte signature + chunks (length, type, data, crc).
  * IDAT chunk contains zlib-compressed scanlines; filter byte precedes each row.
  */
-function extractPngPixelBrightness(buffer: Buffer): number | null {
+function extractPngAverageBrightness(buffer: Buffer): number | null {
   // PNG signature: 8 bytes
   const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
   if (!buffer.slice(0, 8).equals(PNG_SIGNATURE)) {
     return null;
   }
 
-  // IHDR data starts at offset 16 (8 sig + 4 len + 4 type); bitDepth at 24, colorType at 25
-  if (buffer.length < 26) {
+  // IHDR data starts at offset 16 (8 sig + 4 len + 4 type); width/height/bitDepth/colorType are in the data block.
+  if (buffer.length < 33) {
     return null;
   }
 
-  // Read IHDR to get color type and bit depth
-  // IHDR chunk starts at offset 8: 4(len) + 4(type) + 13(data) + 4(crc)
+  const width = buffer.readUInt32BE(16);
+  const height = buffer.readUInt32BE(20);
   const bitDepth = buffer.readUInt8(24);
   const colorType = buffer.readUInt8(25);
 
@@ -83,6 +84,7 @@ function extractPngPixelBrightness(buffer: Buffer): number | null {
   }
 
   const bytesPerPixel = colorType === 6 ? 4 : 3;
+  const rowLength = 1 + width * bytesPerPixel;
 
   // Collect all IDAT chunk data
   const idatChunks: Buffer[] = [];
@@ -112,21 +114,106 @@ function extractPngPixelBrightness(buffer: Buffer): number | null {
   }
 
   // Each scanline: 1 filter byte + width * bytesPerPixel bytes
-  // For a 1×1 image: raw = [filterByte, R, G, B, (A)]
-  if (raw.length < 1 + bytesPerPixel) {
+  if (raw.length !== height * rowLength) {
     return null;
   }
 
-  // Only handle Filter type 0 (None). Other filter types require row reconstruction
-  // which is unnecessary for 1×1 images and may yield incorrect RGB values.
-  const filterByte = raw.readUInt8(0);
-  if (filterByte !== 0) {
+  const pixels: number[] = [];
+  let previousRow: Buffer<ArrayBufferLike> = Buffer.alloc(
+    width * bytesPerPixel,
+  );
+
+  for (let row = 0; row < height; row += 1) {
+    const rowOffset = row * rowLength;
+    const filterByte = raw.readUInt8(rowOffset);
+    const scanline = raw.subarray(rowOffset + 1, rowOffset + rowLength);
+    const reconstructed = unfilterScanline(
+      filterByte,
+      scanline,
+      previousRow,
+      bytesPerPixel,
+    );
+    if (reconstructed === null) {
+      return null;
+    }
+
+    for (let column = 0; column < width; column += 1) {
+      const pixelOffset = column * bytesPerPixel;
+      const r = reconstructed.readUInt8(pixelOffset);
+      const g = reconstructed.readUInt8(pixelOffset + 1);
+      const b = reconstructed.readUInt8(pixelOffset + 2);
+      pixels.push(Math.round((r + g + b) / 3));
+    }
+
+    previousRow = reconstructed;
+  }
+
+  if (pixels.length === 0) {
     return null;
   }
 
-  const r = raw.readUInt8(1);
-  const g = raw.readUInt8(2);
-  const b = raw.readUInt8(3);
+  const sum = pixels.reduce((accumulator, value) => accumulator + value, 0);
+  return Math.round(sum / pixels.length);
+}
 
-  return Math.round((r + g + b) / 3);
+function unfilterScanline(
+  filterByte: number,
+  scanline: Buffer<ArrayBufferLike>,
+  previousRow: Buffer<ArrayBufferLike>,
+  bytesPerPixel: number,
+): Buffer<ArrayBufferLike> | null {
+  const reconstructed: Buffer<ArrayBufferLike> = Buffer.alloc(scanline.length);
+
+  for (let index = 0; index < scanline.length; index += 1) {
+    const rawValue = scanline.readUInt8(index);
+    const left =
+      index >= bytesPerPixel
+        ? reconstructed.readUInt8(index - bytesPerPixel)
+        : 0;
+    const up = previousRow.readUInt8(index);
+    const upLeft =
+      index >= bytesPerPixel ? previousRow.readUInt8(index - bytesPerPixel) : 0;
+
+    let value: number;
+    switch (filterByte) {
+      case 0:
+        value = rawValue;
+        break;
+      case 1:
+        value = rawValue + left;
+        break;
+      case 2:
+        value = rawValue + up;
+        break;
+      case 3:
+        value = rawValue + Math.floor((left + up) / 2);
+        break;
+      case 4:
+        value = rawValue + paethPredictor(left, up, upLeft);
+        break;
+      default:
+        return null;
+    }
+
+    reconstructed.writeUInt8(value & 0xff, index);
+  }
+
+  return reconstructed;
+}
+
+function paethPredictor(left: number, up: number, upLeft: number): number {
+  const prediction = left + up - upLeft;
+  const distanceLeft = Math.abs(prediction - left);
+  const distanceUp = Math.abs(prediction - up);
+  const distanceUpLeft = Math.abs(prediction - upLeft);
+
+  if (distanceLeft <= distanceUp && distanceLeft <= distanceUpLeft) {
+    return left;
+  }
+
+  if (distanceUp <= distanceUpLeft) {
+    return up;
+  }
+
+  return upLeft;
 }

@@ -5,9 +5,10 @@ const toDecimal = (degrees: number, minutes: number, seconds: number): number =>
 
 const TOKYO_TOWER_LATITUDE = toDecimal(35, 39, 29.1572);
 const TOKYO_TOWER_LONGITUDE = toDecimal(139, 44, 28.8869);
-const describeOrSkip = process.env.YAHOO_APP_CLIENT_ID
-  ? describe
-  : describe.skip;
+const describeOrSkip =
+  process.env.RUN_YAHOO_INTEGRATION && process.env.YAHOO_APP_CLIENT_ID
+    ? describe
+    : describe.skip;
 
 describeOrSkip("getYahooReverseGeocodedAddress (integration)", () => {
   beforeAll(() => {

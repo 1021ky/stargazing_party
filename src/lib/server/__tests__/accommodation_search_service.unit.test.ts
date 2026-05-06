@@ -91,8 +91,8 @@ describe("searchStargazingAccommodations", () => {
     resolveLightPollution.mockResolvedValue({
       lightPollutionProxy: 35,
       lightPollutionLevel: "低",
-      lightPollutionSource: "black-marble-vnp46a4",
-      lightPollutionDataLabel: "2024年データ",
+      lightPollutionSource: "gibs-black-marble",
+      lightPollutionDataLabel: "2016年データ",
     });
   });
 

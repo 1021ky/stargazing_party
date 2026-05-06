@@ -2,7 +2,10 @@ import { searchHotelsWithAvailability } from "../rakuten_travel_hotel_search_api
 
 const TOKYO_STATION_LATITUDE = 35.681236;
 const TOKYO_STATION_LONGITUDE = 139.767125;
-const describeOrSkip = process.env.RAKUTEN_APP_ID ? describe : describe.skip;
+const describeOrSkip =
+  process.env.RUN_RAKUTEN_INTEGRATION && process.env.RAKUTEN_APP_ID
+    ? describe
+    : describe.skip;
 
 describeOrSkip("searchHotelsWithAvailability (integration)", () => {
   beforeAll(() => {

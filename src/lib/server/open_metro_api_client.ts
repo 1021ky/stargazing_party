@@ -1,12 +1,41 @@
-import * as dns from "dns";
-import * as https from "https";
+import * as dns from "node:dns";
+import * as https from "node:https";
 import type { fetchWeatherApi } from "openmeteo";
 
-type WeatherApiResponse = Awaited<
-  ReturnType<typeof fetchWeatherApi>
-> extends Array<infer T>
-  ? T
-  : never;
+interface OpenMeteoRawJson {
+  daily?: {
+    weather_code?: number[];
+    temperature_2m_max?: number[];
+    temperature_2m_min?: number[];
+    time?: string[];
+  };
+  hourly?: {
+    weather_code?: number[];
+    temperature_2m?: number[];
+    is_day?: number[];
+    time?: string[];
+  };
+  utc_offset_seconds?: number;
+  timezone?: string | null;
+}
+
+interface OpenMeteoVariableSet {
+  valuesArray(): number[];
+}
+
+interface OpenMeteoSection {
+  variables(index: number): OpenMeteoVariableSet | null;
+  time(): number;
+  interval(): number;
+}
+
+interface OpenMeteoResponse {
+  __raw?: OpenMeteoRawJson;
+  daily(): OpenMeteoSection | null;
+  hourly(): OpenMeteoSection | null;
+  utcOffsetSeconds(): number;
+  timezone(): string | null;
+}
 
 const OPEN_METEO_BASE_URL = "https://api.open-meteo.com/v1/forecast";
 const DAILY_VARIABLES = "weather_code,temperature_2m_max,temperature_2m_min";
@@ -122,7 +151,7 @@ export async function getDailyWeatherSummariesRange(
 
 async function fetchWeatherWithRetry(
   params: Parameters<typeof fetchWeatherApi>[1],
-): Promise<Awaited<ReturnType<typeof fetchWeatherApi>>> {
+): Promise<OpenMeteoResponse[]> {
   let attempt = 0;
   let lastError: unknown;
 
@@ -143,9 +172,7 @@ async function fetchWeatherWithRetry(
       const adapter = buildAdapterFromJson(json);
       const pretty = revealAdapter(adapter);
       console.dir(pretty, { depth: null });
-      return [adapter] as unknown as Awaited<
-        ReturnType<typeof fetchWeatherApi>
-      >;
+      return [adapter];
     } catch (err) {
       lastError = err;
       attempt += 1;
@@ -163,29 +190,25 @@ async function fetchWeatherWithRetry(
   throw new Error("Open-Meteo API へのアクセスに失敗しました");
 }
 // 関数プロパティを呼んで可読なオブジェクトに変換してログ出力する例
-function revealAdapter(adapter: any) {
-  const daily =
-    typeof adapter.daily === "function" ? adapter.daily() : adapter.daily;
-  const hourly =
-    typeof adapter.hourly === "function" ? adapter.hourly() : adapter.hourly;
-  const utcOffsetSeconds =
-    typeof adapter.utcOffsetSeconds === "function"
-      ? adapter.utcOffsetSeconds()
-      : adapter.utcOffsetSeconds;
-  const timezone =
-    typeof adapter.timezone === "function"
-      ? adapter.timezone()
-      : adapter.timezone;
+function revealAdapter(adapter: OpenMeteoResponse) {
+  const daily = adapter.daily();
+  const hourly = adapter.hourly();
+  const utcOffsetSeconds = adapter.utcOffsetSeconds();
+  const timezone = adapter.timezone();
 
-  const dailyObj = {
-    startTimestamp:
-      typeof daily.time === "function" ? daily.time() : daily.time,
-    intervalSeconds:
-      typeof daily.interval === "function" ? daily.interval() : daily.interval,
-    weather_code: daily.variables?.(0)?.valuesArray?.() ?? null,
-    temperature_2m_max: daily.variables?.(1)?.valuesArray?.() ?? null,
-    temperature_2m_min: daily.variables?.(2)?.valuesArray?.() ?? null,
-  };
+  const dailyObj = daily
+    ? {
+        startTimestamp:
+          typeof daily.time === "function" ? daily.time() : daily.time,
+        intervalSeconds:
+          typeof daily.interval === "function"
+            ? daily.interval()
+            : daily.interval,
+        weather_code: daily.variables?.(0)?.valuesArray?.() ?? null,
+        temperature_2m_max: daily.variables?.(1)?.valuesArray?.() ?? null,
+        temperature_2m_min: daily.variables?.(2)?.valuesArray?.() ?? null,
+      }
+    : null;
 
   const hourlyObj = hourly
     ? {
@@ -221,7 +244,7 @@ function buildUrlFromParams(params: Record<string, unknown>): string {
 async function fetchOpenMeteoByIp(
   params: Parameters<typeof fetchWeatherApi>[1],
   timeoutMs = 10000,
-): Promise<any> {
+): Promise<OpenMeteoRawJson> {
   // api.open-meteo.com を解決し、IPv4 を優先して選択する（Open‑Meteo は現状 IPv4 のみ応答するため）
   const host = new URL(OPEN_METEO_BASE_URL).hostname;
   const addrs = await dns.promises.lookup(host, { all: true });
@@ -232,7 +255,7 @@ async function fetchOpenMeteoByIp(
   const url = buildUrlFromParams(params as Record<string, unknown>);
   const u = new URL(url);
 
-  return await new Promise<any>((resolve, reject) => {
+  return await new Promise<OpenMeteoRawJson>((resolve, reject) => {
     const opts: https.RequestOptions = {
       host: ip,
       port: 443,
@@ -266,7 +289,7 @@ async function fetchOpenMeteoByIp(
   });
 }
 
-function buildAdapterFromJson(json: any) {
+function buildAdapterFromJson(json: OpenMeteoRawJson): OpenMeteoResponse {
   // extractSummaryFromResponse で使用されるメソッドを提供する最小限のアダプタ
   // 関数プロパティにしているのは、処理速度とメモリ使用量の向上のため
   return {
@@ -275,7 +298,7 @@ function buildAdapterFromJson(json: any) {
       const daily = json.daily || {};
       return {
         variables: (index: number) => {
-          const map: Record<number, any[]> = {
+          const map: Record<number, number[] | undefined> = {
             0: daily.weather_code,
             1: daily.temperature_2m_max,
             2: daily.temperature_2m_min,
@@ -283,7 +306,7 @@ function buildAdapterFromJson(json: any) {
           const arr = map[index];
           if (!arr) return null;
           return {
-            valuesArray: () => Array.from(arr as any[]),
+            valuesArray: () => Array.from(arr),
           };
         },
         time: () => {
@@ -304,7 +327,7 @@ function buildAdapterFromJson(json: any) {
       const hourly = json.hourly || {};
       return {
         variables: (index: number) => {
-          const map: Record<number, any[]> = {
+          const map: Record<number, number[] | undefined> = {
             0: hourly.weather_code,
             1: hourly.temperature_2m,
             2: hourly.is_day,
@@ -312,7 +335,7 @@ function buildAdapterFromJson(json: any) {
           const arr = map[index];
           if (!arr) return null;
           return {
-            valuesArray: () => Array.from(arr as any[]),
+            valuesArray: () => Array.from(arr),
           };
         },
         time: () => {
@@ -343,14 +366,14 @@ function delay(ms: number): Promise<void> {
 }
 
 function extractSummariesFromResponse(
-  response: WeatherApiResponse,
+  response: OpenMeteoResponse,
   targetStartIso: string,
   targetEndIso: string,
 ): DailyWeatherSummary[] {
   try {
     const pretty = revealAdapter(response);
     console.dir(pretty, { depth: null });
-  } catch (e) {
+  } catch {
     // 変換に失敗した場合はフォールバックで raw オブジェクトを出力する
     console.log("Open-Meteo API response (raw):", response);
   }
@@ -388,7 +411,7 @@ function extractSummariesFromResponse(
   }
 
   const timezone = response.timezone() ?? "UTC";
-  const rawJson = (response as unknown as { __raw?: any }).__raw;
+  const rawJson = response.__raw;
   const summaries: DailyWeatherSummary[] = [];
 
   for (let index = 0; index < length; index += 1) {
@@ -422,20 +445,6 @@ function extractSummariesFromResponse(
 
   summaries.sort((a, b) => a.date.localeCompare(b.date));
   return summaries;
-}
-
-function extractSummaryFromResponse(
-  response: WeatherApiResponse,
-  targetDateIso: string,
-): DailyWeatherSummary {
-  const summaries = extractSummariesFromResponse(
-    response,
-    targetDateIso,
-    targetDateIso,
-  );
-  const summary = summaries[0];
-  console.log("Extracted DailyWeatherSummary:", summary);
-  return summary;
 }
 
 function validateCoordinate(
@@ -475,7 +484,7 @@ function toIsoDate(date: Date): string {
 }
 
 function extractVariableValues(
-  variableSource: NonNullable<ReturnType<WeatherApiResponse["daily"]>>,
+  variableSource: NonNullable<ReturnType<OpenMeteoResponse["daily"]>>,
   index: number,
   label: string,
 ): number[] {
@@ -493,7 +502,7 @@ function extractVariableValues(
 }
 
 function determineNightClearSky(
-  rawJson: any,
+  rawJson: OpenMeteoRawJson | undefined,
   targetDateIso: string,
 ): boolean | null {
   if (!rawJson || !rawJson.hourly) {

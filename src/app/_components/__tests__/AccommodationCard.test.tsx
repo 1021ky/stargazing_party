@@ -10,6 +10,11 @@ jest.mock("lucide-react", () => ({
   Star: () => <span data-testid="icon-star" />,
 }));
 
+jest.mock("next/image", () => ({
+  __esModule: true,
+  default: () => <span data-testid="mock-image" />,
+}));
+
 describe("AccommodationCard", () => {
   it("光害レベルと source 情報を表示する", () => {
     render(
@@ -29,15 +34,15 @@ describe("AccommodationCard", () => {
           bookingUrl: "https://example.com/booking",
           lightPollutionProxy: 22.5,
           lightPollutionLevel: "低",
-          lightPollutionSource: "black-marble-vnp46a4",
-          lightPollutionDataLabel: "2024年データ",
+          lightPollutionSource: "gibs-black-marble",
+          lightPollutionDataLabel: "2016年データ",
         }}
       />,
     );
 
     expect(screen.getByText("光害: 低")).toBeInTheDocument();
-    expect(screen.getByText("NTL 22.5 (direct)")).toBeInTheDocument();
-    expect(screen.getByText("2024年データ")).toBeInTheDocument();
+    expect(screen.getByText("NTL 22.5 (satellite)")).toBeInTheDocument();
+    expect(screen.getByText("2016年データ")).toBeInTheDocument();
   });
 
   it("gibs-black-marble の場合は (satellite) ラベルを表示する", () => {
@@ -59,7 +64,7 @@ describe("AccommodationCard", () => {
           lightPollutionProxy: 15.0,
           lightPollutionLevel: "低",
           lightPollutionSource: "gibs-black-marble",
-          lightPollutionDataLabel: "2024年データ",
+          lightPollutionDataLabel: "2016年データ",
         }}
       />,
     );
@@ -87,7 +92,7 @@ describe("AccommodationCard", () => {
           lightPollutionProxy: null,
           lightPollutionLevel: "不明",
           lightPollutionSource: "fallback",
-          lightPollutionDataLabel: "2024年データ",
+          lightPollutionDataLabel: "2016年データ",
         }}
       />,
     );

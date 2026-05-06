@@ -5,7 +5,9 @@ import type React from "react";
 // Minimal props to match DayPicker's DayButton signature without importing internals.
 interface MoonDayButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  day: any; // CalendarDay (avoid importing internal type)
+  day: {
+    date: Date;
+  };
   modifiers: Record<string, boolean>;
 }
 
@@ -39,11 +41,10 @@ function dateToMoonAgeIndex(date: Date): number {
 }
 
 export function MoonDayButton(props: MoonDayButtonProps) {
-  const { day, modifiers, style, children, ...rest } = props;
+  const { day, modifiers: _modifiers, style, children, ...rest } = props;
 
   // The calendar provides a CalendarDay wrapper; use its date.
-  const date =
-    (day as any).date instanceof Date ? (day as any).date : new Date();
+  const date = day.date instanceof Date ? day.date : new Date();
   const age = dateToMoonAgeIndex(date);
   const imgUrl = `/moon/moon_${String(age).padStart(2, "0")}.jpg`;
 

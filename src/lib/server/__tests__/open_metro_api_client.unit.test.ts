@@ -1,14 +1,14 @@
 // Mock state used by the jest.mock factories below
 const mockedHttpsState: {
-  response?: any;
+  response?: Record<string, unknown>;
   failTimes?: number;
   callCount?: number;
 } = {};
 
 jest.mock("dns", () => ({
   promises: {
-    lookup: (host: string, options?: any) => {
-      if (options && options.all) {
+    lookup: (_host: string, options?: { all?: boolean }) => {
+      if (options?.all) {
         return Promise.resolve([{ address: "127.0.0.1", family: 4 }]);
       }
       return Promise.resolve({ address: "127.0.0.1", family: 4 });
@@ -17,9 +17,12 @@ jest.mock("dns", () => ({
 }));
 
 jest.mock("https", () => {
-  const { PassThrough } = require("stream");
+  const { PassThrough } = require("node:stream");
   return {
-    request: (opts: any, cb: any) => {
+    request: (
+      _opts: Record<string, unknown>,
+      cb: (res: NodeJS.ReadableStream) => void,
+    ) => {
       mockedHttpsState.callCount = (mockedHttpsState.callCount || 0) + 1;
       const req = new PassThrough();
       req.on = req.addListener.bind(req);
