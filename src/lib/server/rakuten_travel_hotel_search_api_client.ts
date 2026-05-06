@@ -5,6 +5,13 @@ const MAX_RETRIES = 3;
 const SEARCH_RADIUS_KM = 3;
 const SYNODIC_MONTH_DAYS = 29.530588853;
 
+export class RakutenHotelNotFoundError extends Error {
+  constructor() {
+    super("周辺の地域でホテルは見つかりませんでした");
+    this.name = "RakutenHotelNotFoundError";
+  }
+}
+
 export interface RakutenHotelAccommodation {
   id: string;
   name: string;
@@ -148,6 +155,7 @@ function createFetchClient(): Fetcher {
   return async (input, init = {}) => {
     let attempt = 0;
     let lastError: Error | null = null;
+    let notFound = false;
 
     while (attempt < MAX_RETRIES) {
       const controller = new AbortController();
@@ -160,6 +168,10 @@ function createFetchClient(): Fetcher {
         .then(async (response) => {
           if (response.status === 200) {
             return { success: true as const, response };
+          }
+          if (response.status === 404) {
+            notFound = true;
+            return { success: false as const, abort: true };
           }
           if (response.status === 400) {
             try {
@@ -191,9 +203,15 @@ function createFetchClient(): Fetcher {
       if (result.success) {
         return result.response;
       }
+      if ("abort" in result && result.abort) {
+        break;
+      }
       attempt += 1;
     }
 
+    if (notFound) {
+      throw new RakutenHotelNotFoundError();
+    }
     console.error("Max retries reached. Last error:", lastError);
     throw (
       lastError ??

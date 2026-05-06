@@ -1,4 +1,7 @@
-import { searchHotelsWithAvailability } from "../rakuten_travel_hotel_search_api_client";
+import {
+  RakutenHotelNotFoundError,
+  searchHotelsWithAvailability,
+} from "../rakuten_travel_hotel_search_api_client";
 
 describe("searchHotelsWithAvailability (unit)", () => {
   const originalFetch = global.fetch;
@@ -118,6 +121,17 @@ describe("searchHotelsWithAvailability (unit)", () => {
       searchHotelsWithAvailability(latitude, longitude, ["2025-02-01"]),
     ).rejects.toThrow("Unexpected status code: 500");
     expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("APIが404を返した場合はリトライせずRakutenHotelNotFoundErrorを投げる", async () => {
+    const fetchMock = jest
+      .spyOn(global, "fetch")
+      .mockResolvedValue(new Response(null, { status: 404 }));
+
+    await expect(
+      searchHotelsWithAvailability(latitude, longitude, ["2025-02-01"]),
+    ).rejects.toThrow(RakutenHotelNotFoundError);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("APIレスポンスにエラーが含まれる場合は例外を投げる", async () => {

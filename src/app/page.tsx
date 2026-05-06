@@ -151,6 +151,13 @@ export default function Home() {
           : null;
       setAccommodations(hotels);
       setSearchMetadata({ resolvedAddress, weather });
+      const warning =
+        typeof data?.hotelSearchWarning === "string"
+          ? data.hotelSearchWarning
+          : null;
+      if (warning) {
+        setToastMessage(warning);
+      }
     } catch (error) {
       if (controller.signal.aborted) {
         return;

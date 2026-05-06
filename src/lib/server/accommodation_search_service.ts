@@ -4,6 +4,7 @@ import { getDailyWeatherSummary } from "./open_metro_api_client";
 import { getPrefectureCoordinates } from "./prefecture_geocode";
 import {
   type RakutenHotelAccommodation,
+  RakutenHotelNotFoundError,
   searchHotelsWithAvailability,
 } from "./rakuten_travel_hotel_search_api_client";
 import { getYahooReverseGeocodedAddress } from "./yahoo_reverse_geocoder_api_client";
@@ -40,6 +41,7 @@ export interface StargazingSearchResult {
     temperatureMin: number;
     timezone: string;
   };
+  hotelSearchWarning?: string;
 }
 
 export async function searchStargazingAccommodations({
@@ -51,7 +53,7 @@ export async function searchStargazingAccommodations({
   const isoDate = normaliseDate(date);
   const coords = resolveSearchCoordinates({ prefecture, bounds });
 
-  const [address, weather, hotels] = await Promise.all([
+  const [address, weather, hotelsResult] = await Promise.all([
     getYahooReverseGeocodedAddress(coords.latitude, coords.longitude),
     getDailyWeatherSummary(coords.latitude, coords.longitude, isoDate),
     searchHotelsWithFallback(coords.latitude, coords.longitude, isoDate),
@@ -66,7 +68,7 @@ export async function searchStargazingAccommodations({
     timezone: weather.timezone,
   };
 
-  const filtered = applyFilters(hotels, filters).filter(
+  const filtered = applyFilters(hotelsResult.hotels, filters).filter(
     (hotel) => hotel.availableRooms > 0,
   );
 
@@ -91,6 +93,9 @@ export async function searchStargazingAccommodations({
     latitude: coords.latitude,
     longitude: coords.longitude,
     weather: weatherSummary,
+    ...(hotelsResult.warning
+      ? { hotelSearchWarning: hotelsResult.warning }
+      : {}),
   };
 }
 
@@ -98,15 +103,21 @@ async function searchHotelsWithFallback(
   latitude: number,
   longitude: number,
   isoDate: string,
-): Promise<RakutenHotelAccommodation[]> {
+): Promise<{ hotels: RakutenHotelAccommodation[]; warning?: string }> {
   try {
-    return await searchHotelsWithAvailability(latitude, longitude, [isoDate]);
+    const hotels = await searchHotelsWithAvailability(latitude, longitude, [
+      isoDate,
+    ]);
+    return { hotels };
   } catch (error) {
+    if (error instanceof RakutenHotelNotFoundError) {
+      return { hotels: [], warning: error.message };
+    }
     console.warn(
       "Rakuten hotel search failed. Returning empty accommodations.",
       error,
     );
-    return [];
+    return { hotels: [] };
   }
 }
 
