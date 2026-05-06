@@ -12,9 +12,15 @@ jest.mock("../open_metro_api_client", () => ({
   getDailyWeatherSummary: jest.fn(),
 }));
 
-jest.mock("../rakuten_travel_hotel_search_api_client", () => ({
-  searchHotelsWithAvailability: jest.fn(),
-}));
+jest.mock("../rakuten_travel_hotel_search_api_client", () => {
+  const actual = jest.requireActual(
+    "../rakuten_travel_hotel_search_api_client",
+  );
+  return {
+    searchHotelsWithAvailability: jest.fn(),
+    RakutenHotelNotFoundError: actual.RakutenHotelNotFoundError,
+  };
+});
 
 jest.mock("../light_pollution_service", () => ({
   resolveLightPollution: jest.fn(),
@@ -174,6 +180,26 @@ describe("searchStargazingAccommodations", () => {
       isClearSky: true,
       weatherCode: 0,
     });
+    expect(result.hotelSearchWarning).toBeUndefined();
+  });
+
+  it("宿泊 API が 404 を返した場合は空配列とともに hotelSearchWarning を返す", async () => {
+    const { RakutenHotelNotFoundError } = jest.requireActual(
+      "../rakuten_travel_hotel_search_api_client",
+    );
+    searchHotelsWithAvailability.mockRejectedValueOnce(
+      new RakutenHotelNotFoundError(),
+    );
+
+    const result = await searchStargazingAccommodations({
+      date: "2025-02-01",
+      prefecture: "東京都",
+    });
+
+    expect(result.accommodations).toHaveLength(0);
+    expect(result.hotelSearchWarning).toBe(
+      "周辺の地域でホテルは見つかりませんでした",
+    );
   });
 
   it("都道府県がサポート対象外の場合は例外を投げる", async () => {

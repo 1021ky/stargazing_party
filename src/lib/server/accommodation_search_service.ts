@@ -93,7 +93,9 @@ export async function searchStargazingAccommodations({
     latitude: coords.latitude,
     longitude: coords.longitude,
     weather: weatherSummary,
-    ...(hotelsResult.warning ? { hotelSearchWarning: hotelsResult.warning } : {}),
+    ...(hotelsResult.warning
+      ? { hotelSearchWarning: hotelsResult.warning }
+      : {}),
   };
 }
 
@@ -103,7 +105,9 @@ async function searchHotelsWithFallback(
   isoDate: string,
 ): Promise<{ hotels: RakutenHotelAccommodation[]; warning?: string }> {
   try {
-    const hotels = await searchHotelsWithAvailability(latitude, longitude, [isoDate]);
+    const hotels = await searchHotelsWithAvailability(latitude, longitude, [
+      isoDate,
+    ]);
     return { hotels };
   } catch (error) {
     if (error instanceof RakutenHotelNotFoundError) {

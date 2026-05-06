@@ -2,6 +2,8 @@ const BASE_URL =
   "https://app.rakuten.co.jp/services/api/Travel/SimpleHotelSearch/20170426";
 const REQUEST_TIMEOUT_MS = 5_000;
 const MAX_RETRIES = 3;
+const SEARCH_RADIUS_KM = 3;
+const SYNODIC_MONTH_DAYS = 29.530588853;
 
 export class RakutenHotelNotFoundError extends Error {
   constructor() {
@@ -9,8 +11,6 @@ export class RakutenHotelNotFoundError extends Error {
     this.name = "RakutenHotelNotFoundError";
   }
 }
-const SEARCH_RADIUS_KM = 3;
-const SYNODIC_MONTH_DAYS = 29.530588853;
 
 export interface RakutenHotelAccommodation {
   id: string;
@@ -208,6 +208,9 @@ function createFetchClient(): Fetcher {
       attempt += 1;
     }
 
+    if (lastError instanceof RakutenHotelNotFoundError) {
+      throw lastError;
+    }
     console.error("Max retries reached. Last error:", lastError);
     throw (
       lastError ??
