@@ -2,7 +2,14 @@
 
 import type { FeatureCollection, Geometry } from "geojson";
 import { useEffect } from "react";
-import { GeoJSON, MapContainer, TileLayer, WMSTileLayer, useMap } from "react-leaflet";
+import {
+  GeoJSON,
+  MapContainer,
+  TileLayer,
+  useMap,
+  WMSTileLayer,
+} from "react-leaflet";
+import { resolveGibsLightPollutionDate } from "@/lib/light_pollution_baseline";
 
 export interface MapSearchBounds {
   minLatitude: number;
@@ -26,12 +33,13 @@ interface PrefectureMapCanvasProps {
   onBoundsChange?: (bounds: MapSearchBounds) => void;
 }
 
-
 export function PrefectureMapCanvas({
   geojson,
   onPick,
   onBoundsChange,
 }: PrefectureMapCanvasProps) {
+  const lightPollutionTime = resolveGibsLightPollutionDate();
+
   return (
     <MapContainer
       center={[36.2048, 138.2529]}
@@ -45,7 +53,7 @@ export function PrefectureMapCanvas({
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       <WMSTileLayer
-        url="https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?TIME=2016-01-01"
+        url={`https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?TIME=${lightPollutionTime}`}
         layers="VIIRS_Black_Marble"
         format="image/jpeg"
         transparent={false}

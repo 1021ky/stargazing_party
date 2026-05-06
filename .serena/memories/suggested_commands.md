@@ -1,0 +1,8 @@
+- Install deps: pnpm install
+- Dev server: pnpm dev
+- Build: pnpm build
+- Start prod server: pnpm start
+- Lint: pnpm lint
+- Format: pnpm format
+- Test: pnpm test
+- Useful system commands (Darwin): git, ls, cd, rg, find, sed, awk

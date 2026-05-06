@@ -1,0 +1,3 @@
+- Purpose: Stargazing Party helps users find suitable stargazing dates (new moon + weather) and nearby accommodations.
+- Stack: Next.js 15 App Router, React 19, TypeScript, Biome, Jest (ts-jest), pnpm.
+- Structure: API routes in src/app/api, UI in src/app/_components, server orchestration/clients in src/lib/server, tests under __tests__.

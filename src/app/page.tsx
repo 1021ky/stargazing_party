@@ -126,16 +126,16 @@ export default function Home() {
       const weather =
         data?.weather && typeof data.weather === "object"
           ? {
-            date:
-              typeof data.weather.date === "string" ? data.weather.date : "",
-            isClearSky: Boolean(data.weather.isClearSky),
-            temperatureMax: Number(data.weather.temperatureMax ?? Number.NaN),
-            temperatureMin: Number(data.weather.temperatureMin ?? Number.NaN),
-            timezone:
-              typeof data.weather.timezone === "string"
-                ? data.weather.timezone
-                : "",
-          }
+              date:
+                typeof data.weather.date === "string" ? data.weather.date : "",
+              isClearSky: Boolean(data.weather.isClearSky),
+              temperatureMax: Number(data.weather.temperatureMax ?? Number.NaN),
+              temperatureMin: Number(data.weather.temperatureMin ?? Number.NaN),
+              timezone:
+                typeof data.weather.timezone === "string"
+                  ? data.weather.timezone
+                  : "",
+            }
           : null;
       setAccommodations(hotels);
       setSearchMetadata({ resolvedAddress, weather });

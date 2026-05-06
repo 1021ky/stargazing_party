@@ -70,8 +70,8 @@ body {
   display: table-cell;
 }
 
-.rdp-tbody tr>td,
-.rdp-thead tr>th {
+.rdp-tbody tr > td,
+.rdp-thead tr > th {
   padding: 0.1rem;
 }
 
