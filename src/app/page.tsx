@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Accommodation } from "./_components/AccommodationCard";
 import type { MapSearchBounds } from "./_components/PrefectureMapCanvas";
 import { SearchForm } from "./_components/SearchForm";
@@ -42,8 +42,6 @@ export default function Home() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
-
-  const dismissToast = useCallback(() => setToastMessage(null), []);
 
   useEffect(() => {
     return () => {
@@ -108,10 +106,19 @@ export default function Home() {
     abortControllerRef.current = controller;
 
     try {
-      const response = await fetch(`/api/search?${requestParams.toString()}`, {
-        method: "GET",
-        signal: controller.signal,
-      });
+      const response = await fetchSearchWithRetry(
+        `/api/search?${requestParams.toString()}`,
+        controller.signal,
+      );
+
+      if (response.status === 500) {
+        setToastMessage(
+          "サーバーでエラーが発生しました。リロードを試してください",
+        );
+        setAccommodations([]);
+        setSearchMetadata(null);
+        return;
+      }
 
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
@@ -187,10 +194,36 @@ export default function Home() {
         </div>
       </main>
       {toastMessage && (
-        <Toast message={toastMessage} onDismiss={dismissToast} />
+        <Toast message={toastMessage} onClose={() => setToastMessage(null)} />
       )}
     </div>
   );
+}
+
+const CLIENT_MAX_RETRIES = 2;
+const CLIENT_RETRY_DELAY_MS = 1_000;
+
+async function fetchSearchWithRetry(
+  url: string,
+  signal: AbortSignal,
+): Promise<Response> {
+  let lastResponse: Response | null = null;
+  for (let attempt = 0; attempt <= CLIENT_MAX_RETRIES; attempt++) {
+    if (attempt > 0) {
+      await new Promise<void>((resolve) =>
+        setTimeout(resolve, CLIENT_RETRY_DELAY_MS * 2 ** (attempt - 1)),
+      );
+    }
+    if (signal.aborted) {
+      throw new DOMException("Aborted", "AbortError");
+    }
+    const response = await fetch(url, { method: "GET", signal });
+    if (response.status !== 500) {
+      return response;
+    }
+    lastResponse = response;
+  }
+  return lastResponse as Response;
 }
 
 function buildIsoDate(year: string, month: string, day: string): string {

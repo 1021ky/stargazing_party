@@ -1,34 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { X } from "lucide-react";
+import { useEffect } from "react";
 
-interface ToastProps {
+type ToastProps = {
   message: string;
   duration?: number;
-  onDismiss: () => void;
-}
+  onClose: () => void;
+};
 
-export function Toast({ message, duration = 5000, onDismiss }: ToastProps) {
-  const [visible, setVisible] = useState(true);
-
+export function Toast({ message, duration = 5000, onClose }: ToastProps) {
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setVisible(false);
-      onDismiss();
-    }, duration);
+    const timer = setTimeout(onClose, duration);
     return () => clearTimeout(timer);
-  }, [duration, onDismiss]);
-
-  if (!visible) {
-    return null;
-  }
+  }, [duration, onClose]);
 
   return (
-    <output
-      aria-live="polite"
-      className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-xl bg-slate-800 px-5 py-3 text-sm text-white shadow-lg"
-    >
-      {message}
-    </output>
+    <div className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-xl bg-gray-800 px-5 py-3 text-sm text-white shadow-lg">
+      <span>{message}</span>
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="閉じる"
+        className="flex-shrink-0 rounded p-0.5 hover:bg-white/20"
+      >
+        <X className="h-4 w-4" />
+      </button>
+    </div>
   );
 }

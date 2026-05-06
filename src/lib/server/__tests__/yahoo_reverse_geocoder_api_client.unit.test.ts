@@ -43,15 +43,22 @@ describe("getYahooReverseGeocodedAddress (unit)", () => {
   });
 
   it("APIが非200を返し続ける場合は再試行し最終的に例外を投げる", async () => {
+    jest.useFakeTimers();
+
     const fetchMock = jest
       .spyOn(global, "fetch")
       .mockResolvedValue(
         new Response("<ResultSet></ResultSet>", { status: 500 }),
       );
 
-    await expect(
-      getYahooReverseGeocodedAddress(latitude, longitude),
-    ).rejects.toThrow("Unexpected status code: 500");
+    const promise = getYahooReverseGeocodedAddress(latitude, longitude);
+    const rejection = expect(promise).rejects.toThrow(
+      "Unexpected status code: 500",
+    );
+    // バックオフ遅延を進める: 1回目リトライ前 1s、2回目リトライ前 2s
+    await jest.advanceTimersByTimeAsync(1_000);
+    await jest.advanceTimersByTimeAsync(2_000);
+    await rejection;
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
@@ -75,10 +82,14 @@ describe("getYahooReverseGeocodedAddress (unit)", () => {
 
     const promise = getYahooReverseGeocodedAddress(latitude, longitude);
     const rejection = expect(promise).rejects.toThrow("Request timeout");
-    // timeoutのabortが発生するようにする
-    for (let i = 0; i < 3; i += 1) {
-      await jest.advanceTimersByTimeAsync(5000);
-    }
+    // attempt 0: タイムアウト 5s → バックオフ 1s
+    await jest.advanceTimersByTimeAsync(5_000);
+    await jest.advanceTimersByTimeAsync(1_000);
+    // attempt 1: タイムアウト 5s → バックオフ 2s
+    await jest.advanceTimersByTimeAsync(5_000);
+    await jest.advanceTimersByTimeAsync(2_000);
+    // attempt 2: タイムアウト 5s
+    await jest.advanceTimersByTimeAsync(5_000);
     // 実行して、アサーション
     await rejection;
     expect(fetchMock).toHaveBeenCalledTimes(3);
