@@ -155,6 +155,7 @@ function createFetchClient(): Fetcher {
   return async (input, init = {}) => {
     let attempt = 0;
     let lastError: Error | null = null;
+    let notFound = false;
 
     while (attempt < MAX_RETRIES) {
       const controller = new AbortController();
@@ -169,7 +170,7 @@ function createFetchClient(): Fetcher {
             return { success: true as const, response };
           }
           if (response.status === 404) {
-            lastError = new RakutenHotelNotFoundError();
+            notFound = true;
             return { success: false as const, abort: true };
           }
           if (response.status === 400) {
@@ -208,8 +209,8 @@ function createFetchClient(): Fetcher {
       attempt += 1;
     }
 
-    if (lastError instanceof RakutenHotelNotFoundError) {
-      throw lastError;
+    if (notFound) {
+      throw new RakutenHotelNotFoundError();
     }
     console.error("Max retries reached. Last error:", lastError);
     throw (
